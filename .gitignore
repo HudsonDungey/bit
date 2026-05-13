@@ -1,7 +1,11 @@
 node_modules/
-yarn.lock
-.next/
-.env.local
+dist/
+artifacts/
+cache/
+out/
 .env
-.DS_Store
+.env.local
 *.log
+.DS_Store
+tsconfig.tsbuildinfo
+packages/*/tsconfig.tsbuildinfo

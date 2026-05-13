@@ -1,0 +1,17 @@
+{
+  "name": "@pulse/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "ts-node --esm server.ts",
+    "dev":   "ts-node --esm server.ts"
+  },
+  "dependencies": {
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  }
+}
