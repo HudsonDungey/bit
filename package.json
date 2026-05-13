@@ -1,14 +1,19 @@
 {
   "name": "pulse",
   "private": true,
+  "packageManager": "yarn@4.9.1",
   "workspaces": ["packages/*"],
   "scripts": {
-    "build": "npm run build -w packages/sdk && npm run build -w packages/scheduler",
-    "typecheck": "npm run typecheck -w packages/sdk && npm run typecheck -w packages/scheduler",
+    "build": "yarn workspace @pulse/sdk build && yarn workspace @pulse/scheduler build",
+    "typecheck": "yarn workspace @pulse/sdk typecheck && yarn workspace @pulse/scheduler typecheck",
     "test:e2e": "node --loader ts-node/esm packages/scheduler/test/e2e.ts",
-    "compile:contracts": "npx hardhat compile"
+    "compile:contracts": "yarn hardhat compile"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "hardhat": "^2.22.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0"
   }
 }
