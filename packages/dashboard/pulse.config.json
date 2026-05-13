@@ -26,5 +26,7 @@
     "feeRecipient": "0xProtocol"
   },
 
-  "maxTransactions": 500
+  "maxTransactions": 500,
+
+  "payManagerOwner": "0xOwner"
 }

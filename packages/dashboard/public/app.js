@@ -12,6 +12,7 @@ document.querySelectorAll(".nav-item").forEach(item => {
     item.classList.add("active");
     document.getElementById("page-" + page).classList.add("active");
     refresh();
+    if (page === "paymanager") refreshPayManager();
   });
 });
 
@@ -351,6 +352,7 @@ function refresh() {
   if (active === "page-products")       refreshPlans();
   if (active === "page-subscriptions")  refreshSubs();
   if (active === "page-transactions")   refreshTx();
+  if (active === "page-paymanager")     refreshPayManager();
 }
 
 function startPolling() {
@@ -372,3 +374,188 @@ async function init() {
 }
 
 init();
+
+// ── Pay Manager ────────────────────────────────────────────────────────────────
+
+let pmWallet = localStorage.getItem("pmWallet") || "";
+let pmPayees = [];
+
+function getPmWallet() {
+  return document.getElementById("pm-wallet").value.trim() || "0xDemo";
+}
+
+// on wallet input change: save to localStorage, refresh balance + payees
+document.getElementById("pm-wallet").addEventListener("input", e => {
+  localStorage.setItem("pmWallet", e.target.value);
+  if (document.getElementById("page-paymanager").classList.contains("active")) {
+    refreshPayManager();
+  }
+});
+
+// on page load, restore wallet
+document.getElementById("pm-wallet").value = pmWallet;
+
+async function refreshPayManager() {
+  const user = getPmWallet();
+  // fetch balance
+  const bal = await api("GET", `/api/balance?user=${encodeURIComponent(user)}`);
+  document.getElementById("pm-balance").textContent = fmt$(bal.balance);
+  // fetch payees
+  pmPayees = await api("GET", `/api/payees?user=${encodeURIComponent(user)}`);
+  renderPayees();
+  // fetch recent pay transactions (direction=out, customer=user)
+  const txs = await api("GET", `/api/transactions?customer=${encodeURIComponent(user)}`);
+  renderPayTx(txs.filter(t => t.direction === "out").slice(0, 20));
+}
+
+function renderPayees() {
+  const tbody = document.getElementById("payees-body");
+  if (!pmPayees.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No payees yet — add one to get started</td></tr>';
+    return;
+  }
+  tbody.innerHTML = pmPayees.map(p => `
+    <tr>
+      <td><strong>${p.label || "—"}</strong></td>
+      <td class="mono">${fmtAddr(p.address)}</td>
+      <td class="text-muted">${fmtTime(p.addedAt)}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-primary btn-sm" onclick="openQuickPay('${p.address}','${p.label}')">Pay</button>
+        <button class="btn btn-danger btn-sm" onclick="removePayee('${p.address}')">Remove</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function renderPayTx(txs) {
+  const tbody = document.getElementById("pay-tx-body");
+  if (!txs.length) {
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No payments yet</td></tr>';
+    return;
+  }
+  tbody.innerHTML = txs.map(t => `
+    <tr>
+      <td class="mono">${fmtAddr(t.payee || t.customer)}</td>
+      <td>${t.planName || "—"}</td>
+      <td class="amount-negative">-${fmt$(t.gross)}</td>
+      <td>${fmt$(t.merchantAmount)}</td>
+      <td class="text-muted">${fmt$(t.fee)}</td>
+      <td class="text-muted">${fmtTime(t.timestamp)}</td>
+    </tr>
+  `).join("");
+}
+
+// Add payee
+document.getElementById("btn-add-payee").addEventListener("click", () => {
+  document.getElementById("add-payee-address").value = "";
+  document.getElementById("add-payee-label").value = "";
+  openModal("modal-add-payee");
+});
+
+document.getElementById("btn-save-payee").addEventListener("click", async () => {
+  const user    = getPmWallet();
+  const address = document.getElementById("add-payee-address").value.trim();
+  const label   = document.getElementById("add-payee-label").value.trim();
+  if (!address) { alert("Address is required"); return; }
+  try {
+    await api("POST", "/api/payees", { user, address, label });
+    closeModal("modal-add-payee");
+    refreshPayManager();
+  } catch (e) { alert("Error: " + e.message); }
+});
+
+async function removePayee(address) {
+  if (!confirm("Remove this payee?")) return;
+  const user = getPmWallet();
+  await api("DELETE", `/api/payees/${encodeURIComponent(address)}?user=${encodeURIComponent(user)}`);
+  refreshPayManager();
+}
+
+// Quick pay
+function openQuickPay(address, label) {
+  document.getElementById("qp-address").textContent = address;
+  document.getElementById("qp-label").textContent   = label || "—";
+  document.getElementById("qp-amount").value = "";
+  document.getElementById("qp-fee-preview").textContent = "$0.00";
+  document.getElementById("qp-net-preview").textContent = "$0.00";
+  document.getElementById("qp-address-hidden").value = address;
+  openModal("modal-quick-pay");
+}
+
+document.getElementById("qp-amount").addEventListener("input", e => {
+  const gross = parseFloat(e.target.value) || 0;
+  const fee   = Math.round(gross * 50) / 10000;
+  document.getElementById("qp-fee-preview").textContent = fmt$(fee);
+  document.getElementById("qp-net-preview").textContent  = fmt$(gross - fee);
+});
+
+document.getElementById("btn-send-payment").addEventListener("click", async () => {
+  const from   = getPmWallet();
+  const to     = document.getElementById("qp-address-hidden").value;
+  const amount = parseFloat(document.getElementById("qp-amount").value);
+  if (!amount || amount <= 0) { alert("Enter a valid amount"); return; }
+  const payee = pmPayees.find(p => p.address === to);
+  try {
+    await api("POST", "/api/pay", { from, to, amount, label: payee?.label });
+    closeModal("modal-quick-pay");
+    refreshPayManager();
+  } catch (e) { alert("Error: " + e.message); }
+});
+
+// Fund account
+document.getElementById("btn-fund").addEventListener("click", async () => {
+  const user = getPmWallet();
+  await api("POST", "/api/fund", { user, amount: 10000 });
+  refreshPayManager();
+});
+
+// Batch payroll
+document.getElementById("btn-run-payroll").addEventListener("click", () => {
+  renderPayrollTable();
+  openModal("modal-payroll");
+});
+
+function renderPayrollTable() {
+  const tbody = document.getElementById("payroll-table-body");
+  if (!pmPayees.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:20px;color:var(--text-muted)">No payees — add some first</td></tr>';
+    return;
+  }
+  tbody.innerHTML = pmPayees.map((p, i) => `
+    <tr>
+      <td><strong>${p.label || "—"}</strong><div class="mono text-muted" style="font-size:11px">${fmtAddr(p.address)}</div></td>
+      <td><input type="number" class="payroll-amount" data-address="${p.address}" data-label="${p.label}" min="0" step="0.01" placeholder="0.00" style="width:100px;padding:6px 8px;border:1px solid var(--border);border-radius:5px;font-size:13px" oninput="updatePayrollSummary()" /></td>
+      <td class="payroll-net text-muted" id="pr-net-${i}">—</td>
+    </tr>
+  `).join("");
+  updatePayrollSummary();
+}
+
+function updatePayrollSummary() {
+  let totalGross = 0;
+  document.querySelectorAll(".payroll-amount").forEach((el, i) => {
+    const gross = parseFloat(el.value) || 0;
+    const net   = Math.round((gross - gross * 50 / 10000) * 100) / 100;
+    document.getElementById(`pr-net-${i}`).textContent = gross > 0 ? fmt$(net) : "—";
+    totalGross += gross;
+  });
+  const totalFee = Math.round(totalGross * 50) / 10000;
+  document.getElementById("pr-total-gross").textContent = fmt$(totalGross);
+  document.getElementById("pr-total-fee").textContent   = fmt$(totalFee);
+  document.getElementById("pr-total-net").textContent   = fmt$(totalGross - totalFee);
+}
+
+document.getElementById("btn-run-payroll-confirm").addEventListener("click", async () => {
+  const from = getPmWallet();
+  const payments = [];
+  document.querySelectorAll(".payroll-amount").forEach(el => {
+    const amount = parseFloat(el.value) || 0;
+    if (amount > 0) payments.push({ to: el.dataset.address, amount, label: el.dataset.label });
+  });
+  if (!payments.length) { alert("Enter at least one amount"); return; }
+  try {
+    await api("POST", "/api/pay/batch", { from, payments });
+    closeModal("modal-payroll");
+    refreshPayManager();
+  } catch (e) { alert("Error: " + e.message); }
+});

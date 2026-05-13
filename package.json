@@ -2,7 +2,7 @@
   "name": "pulse",
   "private": true,
   "packageManager": "yarn@4.9.1",
-  "workspaces": ["packages/*"],
+  "workspaces": ["packages/*", "packages/keeper"],
   "scripts": {
     "build": "yarn workspace @pulse/sdk build && yarn workspace @pulse/scheduler build",
     "typecheck": "yarn workspace @pulse/sdk typecheck && yarn workspace @pulse/scheduler typecheck",

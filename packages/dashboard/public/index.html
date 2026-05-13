@@ -27,6 +27,9 @@
     <div class="nav-item" data-page="transactions">
       <span class="nav-icon">⇄</span> Transactions
     </div>
+    <div class="nav-item" data-page="paymanager">
+      <span class="nav-icon">💸</span> Pay Manager
+    </div>
   </div>
   <div class="sidebar-footer">
     <div class="test-mode-toggle">
@@ -214,6 +217,59 @@
     </div>
   </section>
 
+
+  <!-- Pay Manager page -->
+  <section class="page" id="page-paymanager">
+    <div class="page-header">
+      <div><h2>Pay Manager</h2><p>Payroll &amp; quick payments — 0.5% fee on every transaction</p></div>
+      <button class="btn btn-primary" id="btn-add-payee">+ Add Payee</button>
+    </div>
+
+    <!-- wallet + balance bar -->
+    <div class="card" style="margin-bottom:24px">
+      <div style="padding:16px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:4px">YOUR WALLET</label>
+          <input id="pm-wallet" class="mono" placeholder="0x…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px" />
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Balance</div>
+          <div id="pm-balance" style="font-size:22px;font-weight:700">$0.00</div>
+        </div>
+        <button class="btn btn-outline btn-sm" id="btn-fund">+ Add Test Funds</button>
+      </div>
+    </div>
+
+    <!-- payees table -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Payees</h3>
+        <button class="btn btn-outline btn-sm" id="btn-run-payroll">Run Payroll</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Label</th><th>Address</th><th>Added</th><th></th></tr>
+        </thead>
+        <tbody id="payees-body">
+          <tr class="empty-row"><td colspan="4">No payees yet — add one to get started</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- recent pay transactions -->
+    <div class="card">
+      <div class="card-header"><h3>Recent Payments</h3></div>
+      <table>
+        <thead>
+          <tr><th>To</th><th>Label</th><th>Gross</th><th>Net</th><th>Fee (0.5%)</th><th>Time</th></tr>
+        </thead>
+        <tbody id="pay-tx-body">
+          <tr class="empty-row"><td colspan="6">No payments yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
 </main>
 
 <!-- ── Create Product Modal ── -->
@@ -289,6 +345,104 @@
     <div class="modal-footer">
       <button class="btn btn-outline" data-close="modal-sub">Cancel</button>
       <button class="btn btn-primary" id="btn-save-sub">Subscribe</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add Payee Modal ── -->
+<div class="modal-overlay" id="modal-add-payee">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add Payee</h3>
+      <button class="modal-close" data-close="modal-add-payee">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Wallet Address</label>
+        <input type="text" id="add-payee-address" class="mono" placeholder="0x…" />
+      </div>
+      <div class="form-group">
+        <label>Label (optional)</label>
+        <input type="text" id="add-payee-label" placeholder="e.g. Alice, contractor, etc." />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="modal-add-payee">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-payee">Add Payee</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Quick Pay Modal ── -->
+<div class="modal-overlay" id="modal-quick-pay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Quick Pay</h3>
+      <button class="modal-close" data-close="modal-quick-pay">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Recipient</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="mono" id="qp-address" style="font-size:13px"></span>
+          <span style="color:var(--text-muted)" id="qp-label"></span>
+        </div>
+        <input type="hidden" id="qp-address-hidden" />
+      </div>
+      <div class="form-group">
+        <label>Amount (USDC)</label>
+        <input type="number" id="qp-amount" min="0.01" step="0.01" placeholder="0.00" />
+      </div>
+      <div style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Fee (0.5%)</span>
+          <span id="qp-fee-preview">$0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:600">
+          <span>Recipient gets</span>
+          <span id="qp-net-preview">$0.00</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="modal-quick-pay">Cancel</button>
+      <button class="btn btn-primary" id="btn-send-payment">Send Payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Batch Payroll Modal ── -->
+<div class="modal-overlay" id="modal-payroll">
+  <div class="modal" style="width:560px">
+    <div class="modal-header">
+      <h3>Run Payroll</h3>
+      <button class="modal-close" data-close="modal-payroll">✕</button>
+    </div>
+    <div class="modal-body">
+      <table style="margin-bottom:0">
+        <thead>
+          <tr><th>Payee</th><th>Amount (USDC)</th><th>Net</th></tr>
+        </thead>
+        <tbody id="payroll-table-body"></tbody>
+      </table>
+      <div style="margin-top:16px;background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:12px 14px;font-size:13px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Total Gross</span>
+          <span id="pr-total-gross">$0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text-muted)">Total Fee (0.5%)</span>
+          <span id="pr-total-fee">$0.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-weight:600">
+          <span>Total Net</span>
+          <span id="pr-total-net">$0.00</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="modal-payroll">Cancel</button>
+      <button class="btn btn-primary" id="btn-run-payroll-confirm">Run Payroll</button>
     </div>
   </div>
 </div>

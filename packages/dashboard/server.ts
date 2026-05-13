@@ -17,6 +17,7 @@ interface PulseConfig {
   scheduler: { testTickMs: number; productionTickMs: number };
   defaults: { feeBps: number; merchant: string; feeRecipient: string };
   maxTransactions: number;
+  payManagerOwner?: string;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -53,20 +54,24 @@ interface Subscription {
 
 interface Transaction {
   id: string;
-  subscriptionId: string;
-  planId: string;
-  planName: string;
+  subscriptionId?: string;
+  planId?: string;
+  planName?: string;
   customer: string;
   /** Net to merchant (price - fee). */
   merchantAmount: number;
   fee: number;
   /** Gross = merchantAmount + fee. */
   gross: number;
-  direction: "in";
+  direction: "in" | "out";
+  /** For pay-manager outbound txs: recipient address. */
+  payee?: string;
   status: "success" | "failed";
   failReason?: string;
   timestamp: string;
 }
+
+interface Payee { address: string; label: string; addedAt: string; }
 
 interface AppState {
   testMode: boolean;
@@ -78,6 +83,13 @@ const plans: Plan[]            = [];
 const subscriptions: Subscription[] = [];
 const transactions: Transaction[]   = [];
 const state: AppState = { testMode: cfg.testMode };
+
+const payeeBook = new Map<string, Payee[]>();   // key = user address lowercased
+const balances  = new Map<string, number>();    // key = address lowercased
+const PAY_FEE_BPS = 50;
+
+function getBalance(addr: string)              { return balances.get(addr.toLowerCase()) ?? 10_000; }
+function setBalance(addr: string, v: number)   { balances.set(addr.toLowerCase(), round2(v)); }
 
 // ─── Scheduler ────────────────────────────────────────────────────────────────
 
@@ -198,7 +210,7 @@ function serveFile(res: ServerResponse, filePath: string) {
 
 async function handle(req: IncomingMessage, res: ServerResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
 
@@ -324,6 +336,138 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     if (custQ)   result = result.filter((t) => t.customer.includes(custQ));
     if (statusQ) result = result.filter((t) => t.status === statusQ);
     return json(res, 200, result);
+  }
+
+  // ── Pay Manager — Payees ───────────────────────────────────────────────────
+  if (path === "/api/payees") {
+    if (method === "GET") {
+      const user = url.searchParams.get("user") ?? "";
+      const list = payeeBook.get(user.toLowerCase()) ?? [];
+      return json(res, 200, list);
+    }
+    if (method === "POST") {
+      const b = await readBody(req) as { user?: string; address?: string; label?: string };
+      if (!b.user || !b.address) return json(res, 400, { error: "user and address are required" });
+      const key = b.user.toLowerCase();
+      if (!payeeBook.has(key)) payeeBook.set(key, []);
+      const list = payeeBook.get(key)!;
+      if (list.find((p) => p.address.toLowerCase() === b.address!.toLowerCase())) {
+        return json(res, 409, { error: "already a payee" });
+      }
+      const payee: Payee = { address: b.address, label: b.label ?? "", addedAt: new Date().toISOString() };
+      list.push(payee);
+      return json(res, 201, payee);
+    }
+  }
+
+  // DELETE /api/payees/:addr?user=0x…
+  const payeeDelete = path.match(/^\/api\/payees\/([^/?]+)/);
+  if (payeeDelete && method === "DELETE") {
+    const user    = url.searchParams.get("user") ?? "";
+    const addrRaw = decodeURIComponent(payeeDelete[1]);
+    const key     = user.toLowerCase();
+    const list    = payeeBook.get(key) ?? [];
+    const idx     = list.findIndex((p) => p.address.toLowerCase() === addrRaw.toLowerCase());
+    if (idx === -1) return json(res, 404, { error: "payee not found" });
+    list.splice(idx, 1);
+    payeeBook.set(key, list);
+    return json(res, 200, { ok: true });
+  }
+
+  // ── Pay Manager — Balance ──────────────────────────────────────────────────
+  if (path === "/api/balance" && method === "GET") {
+    const user = url.searchParams.get("user") ?? "";
+    return json(res, 200, { address: user, balance: getBalance(user) });
+  }
+
+  if (path === "/api/fund" && method === "POST") {
+    const b = await readBody(req) as { user?: string; amount?: number };
+    if (!b.user) return json(res, 400, { error: "user is required" });
+    const amount = Number(b.amount ?? 10_000);
+    setBalance(b.user, getBalance(b.user) + amount);
+    return json(res, 200, { address: b.user, balance: getBalance(b.user) });
+  }
+
+  // ── Pay Manager — Payments ─────────────────────────────────────────────────
+  if (path === "/api/pay" && method === "POST") {
+    const b = await readBody(req) as { from?: string; to?: string; amount?: number; label?: string };
+    if (!b.from || !b.to || !b.amount) return json(res, 400, { error: "from, to, amount are required" });
+
+    const gross = Number(b.amount);
+    const fee   = round2(gross * PAY_FEE_BPS / 10_000);
+    const net   = round2(gross - fee);
+
+    const fromBal = getBalance(b.from);
+    if (fromBal < gross) return json(res, 400, { error: "insufficient balance" });
+
+    setBalance(b.from, fromBal - gross);
+    setBalance(b.to, getBalance(b.to) + net);
+
+    // Fee goes to payManagerOwner or defaults.feeRecipient
+    const feeOwner = cfg.payManagerOwner ?? cfg.defaults.feeRecipient;
+    setBalance(feeOwner, getBalance(feeOwner) + fee);
+
+    const tx: Transaction = {
+      id:             randomUUID(),
+      direction:      "out",
+      customer:       b.from,
+      payee:          b.to,
+      planName:       b.label,
+      merchantAmount: net,
+      fee,
+      gross,
+      status:         "success",
+      timestamp:      new Date().toISOString(),
+    };
+
+    transactions.unshift(tx);
+    if (transactions.length > cfg.maxTransactions) transactions.pop();
+
+    return json(res, 200, tx);
+  }
+
+  if (path === "/api/pay/batch" && method === "POST") {
+    const b = await readBody(req) as { from?: string; payments?: Array<{ to?: string; amount?: number; label?: string }> };
+    if (!b.from || !Array.isArray(b.payments)) return json(res, 400, { error: "from and payments are required" });
+
+    const results: Transaction[] = [];
+
+    for (const p of b.payments) {
+      if (!p.to || !p.amount) continue;
+      const gross = Number(p.amount);
+      const fee   = round2(gross * PAY_FEE_BPS / 10_000);
+      const net   = round2(gross - fee);
+
+      const fromBal = getBalance(b.from);
+      if (fromBal < gross) {
+        return json(res, 400, { error: `insufficient balance for payment to ${p.to}` });
+      }
+
+      setBalance(b.from, fromBal - gross);
+      setBalance(p.to, getBalance(p.to) + net);
+
+      const feeOwner = cfg.payManagerOwner ?? cfg.defaults.feeRecipient;
+      setBalance(feeOwner, getBalance(feeOwner) + fee);
+
+      const tx: Transaction = {
+        id:             randomUUID(),
+        direction:      "out",
+        customer:       b.from,
+        payee:          p.to,
+        planName:       p.label,
+        merchantAmount: net,
+        fee,
+        gross,
+        status:         "success",
+        timestamp:      new Date().toISOString(),
+      };
+
+      transactions.unshift(tx);
+      if (transactions.length > cfg.maxTransactions) transactions.pop();
+      results.push(tx);
+    }
+
+    return json(res, 200, results);
   }
 
   // ── Static files ────────────────────────────────────────────────────────────

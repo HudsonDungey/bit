@@ -9,22 +9,27 @@ export interface Plan {
   amount: bigint;
   /** Minimum seconds between charges. */
   period: bigint;
-  /** Hard per-charge cap enforced by the contract. */
-  maxAmountPerCharge: bigint;
   /** Protocol fee in basis points (100 = 1 %). */
   feeBps: number;
   active: boolean;
 }
 
 export interface Subscription {
-  planId: Hex;
   customer: Address;
+  merchant: Address;
+  token: Address;
+  /** Denormalized amount from plan at subscribe time. */
+  amount: bigint;
+  /** Denormalized period from plan at subscribe time. */
+  period: bigint;
   /** Unix timestamp of the next allowed charge. */
   nextChargeAt: bigint;
-  /** Cumulative gross amount charged so far. */
-  totalSpent: bigint;
   /** Opt-in lifetime spend limit; 0n = unlimited. */
   totalSpendCap: bigint;
+  /** Cumulative gross amount charged so far. */
+  totalSpent: bigint;
+  /** Denormalized feeBps from plan at subscribe time. */
+  feeBps: number;
   active: boolean;
 }
 
@@ -34,7 +39,6 @@ export interface CreatePlanParams {
   token: Address;
   amount: bigint;
   period: bigint;
-  maxAmountPerCharge: bigint;
   feeBps: number;
 }
 
@@ -42,6 +46,17 @@ export interface SubscribeParams {
   planId: Hex;
   /** 0n = unlimited */
   totalSpendCap: bigint;
+}
+
+// ─── ChargeResult ─────────────────────────────────────────────────────────────
+
+export interface ChargeResult {
+  txHash: Hash;
+  executorFee: bigint;
+  protocolFee: bigint;
+  merchantAmount: bigint;
+  gross: bigint;
+  nextChargeAt: bigint;
 }
 
 // ─── Webhook types ────────────────────────────────────────────────────────────
