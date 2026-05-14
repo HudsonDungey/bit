@@ -1,0 +1,222 @@
+export const managerAbi = [
+  {
+    type: "function",
+    name: "EXECUTOR_FEE_BPS",
+    inputs: [],
+    outputs: [{ type: "uint16" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "feeRecipient",
+    inputs: [],
+    outputs: [{ type: "address" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "createPlan",
+    inputs: [
+      { name: "token", type: "address" },
+      { name: "amount", type: "uint256" },
+      { name: "period", type: "uint256" },
+      { name: "feeBps", type: "uint16" },
+    ],
+    outputs: [{ name: "planId", type: "bytes32" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "deactivatePlan",
+    inputs: [{ name: "planId", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "subscribe",
+    inputs: [
+      { name: "planId", type: "bytes32" },
+      { name: "totalSpendCap", type: "uint256" },
+    ],
+    outputs: [{ name: "subscriptionId", type: "bytes32" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "cancel",
+    inputs: [{ name: "subscriptionId", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "charge",
+    inputs: [{ name: "subscriptionId", type: "bytes32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "getPlan",
+    inputs: [{ name: "planId", type: "bytes32" }],
+    outputs: [
+      {
+        type: "tuple",
+        components: [
+          { name: "merchant", type: "address" },
+          { name: "token", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "period", type: "uint256" },
+          { name: "feeBps", type: "uint16" },
+          { name: "active", type: "bool" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "getSubscription",
+    inputs: [{ name: "subscriptionId", type: "bytes32" }],
+    outputs: [
+      {
+        type: "tuple",
+        components: [
+          { name: "customer", type: "address" },
+          { name: "merchant", type: "address" },
+          { name: "token", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "period", type: "uint256" },
+          { name: "nextChargeAt", type: "uint256" },
+          { name: "totalSpendCap", type: "uint256" },
+          { name: "totalSpent", type: "uint256" },
+          { name: "feeBps", type: "uint16" },
+          { name: "active", type: "bool" },
+        ],
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "computeSubId",
+    inputs: [
+      { name: "planId", type: "bytes32" },
+      { name: "customer", type: "address" },
+    ],
+    outputs: [{ type: "bytes32" }],
+    stateMutability: "pure",
+  },
+  {
+    type: "event",
+    name: "PlanCreated",
+    inputs: [
+      { name: "planId", type: "bytes32", indexed: true },
+      { name: "merchant", type: "address", indexed: true },
+      { name: "token", type: "address", indexed: false },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "period", type: "uint256", indexed: false },
+      { name: "feeBps", type: "uint16", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "PlanDeactivated",
+    inputs: [
+      { name: "planId", type: "bytes32", indexed: true },
+      { name: "merchant", type: "address", indexed: true },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "Subscribed",
+    inputs: [
+      { name: "subscriptionId", type: "bytes32", indexed: true },
+      { name: "planId", type: "bytes32", indexed: true },
+      { name: "customer", type: "address", indexed: true },
+      { name: "totalSpendCap", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "ChargeExecuted",
+    inputs: [
+      { name: "subscriptionId", type: "bytes32", indexed: true },
+      { name: "executor", type: "address", indexed: true },
+      { name: "customer", type: "address", indexed: true },
+      { name: "gross", type: "uint256", indexed: false },
+      { name: "merchantAmount", type: "uint256", indexed: false },
+      { name: "executorFee", type: "uint256", indexed: false },
+      { name: "protocolFee", type: "uint256", indexed: false },
+      { name: "nextChargeAt", type: "uint256", indexed: false },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
+    name: "Cancelled",
+    inputs: [
+      { name: "subscriptionId", type: "bytes32", indexed: true },
+      { name: "caller", type: "address", indexed: true },
+    ],
+    anonymous: false,
+  },
+] as const;
+
+export const erc20Abi = [
+  {
+    type: "function",
+    name: "balanceOf",
+    inputs: [{ name: "owner", type: "address" }],
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "allowance",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "approve",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "mint",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "decimals",
+    inputs: [],
+    outputs: [{ type: "uint8" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "symbol",
+    inputs: [],
+    outputs: [{ type: "string" }],
+    stateMutability: "view",
+  },
+] as const;

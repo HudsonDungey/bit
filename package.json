@@ -2,7 +2,9 @@
   "name": "pulse",
   "private": true,
   "packageManager": "yarn@4.9.1",
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build": "yarn workspace @pulse/sdk build && yarn workspace @pulse/scheduler build",
     "typecheck": "yarn workspace @pulse/sdk typecheck && yarn workspace @pulse/scheduler typecheck",
@@ -10,10 +12,10 @@
     "compile:contracts": "yarn hardhat compile"
   },
   "devDependencies": {
-    "typescript": "^5.4.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/node": "^20.0.0",
-    "ts-node": "^10.9.2",
     "hardhat": "^2.22.0",
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.0"
   }
 }

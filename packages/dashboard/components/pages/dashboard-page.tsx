@@ -7,6 +7,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { StatusBadge } from "@/components/ui/badge";
 import { PageHeader, LiveBadge } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
+import { IncomeChart } from "@/components/income-chart";
 import { fmt$, fmtAddr, fmtTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Stats, Transaction } from "@/lib/types";
@@ -64,6 +65,8 @@ export function DashboardPage({ stats, newTxIds }: Props) {
           icon={<LayoutGrid className="h-3 w-3" strokeWidth={2.5} />}
         />
       </div>
+
+      <IncomeChart />
 
       <Card>
         <CardHeader>

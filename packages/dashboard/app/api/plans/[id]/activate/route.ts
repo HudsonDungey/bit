@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
-import { getStore } from "@/lib/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(_req: Request, ctx: { params: { id: string } }) {
-  const plan = getStore().plans.find((p) => p.id === ctx.params.id);
-  if (!plan) return NextResponse.json({ error: "plan not found" }, { status: 404 });
-  plan.active = true;
-  return NextResponse.json(plan);
+export async function POST() {
+  // PulseSubscriptionManager.deactivatePlan is one-way. To re-enable a plan
+  // the merchant must call createPlan again (it'll get a new planId).
+  return NextResponse.json(
+    {
+      error:
+        "Plans cannot be reactivated on-chain — create a new plan instead. " +
+        "(PulseSubscriptionManager.deactivatePlan is one-way by design.)",
+    },
+    { status: 400 },
+  );
 }

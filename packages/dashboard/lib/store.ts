@@ -1,14 +1,26 @@
-import type { Plan, Subscription, Transaction } from "./types";
 import { getPulseConfig } from "./config";
+
+export interface PlanMeta {
+  name: string;
+  description: string;
+  intervalLabel: string;
+  cancelAfterCharges: number | null;
+  isTestInterval: boolean;
+  createdAt: string;
+}
+
+export interface SubMeta {
+  createdAt: string;
+}
 
 interface AppState {
   testMode: boolean;
 }
 
 interface GlobalStore {
-  plans: Plan[];
-  subscriptions: Subscription[];
-  transactions: Transaction[];
+  planMeta: Map<string, PlanMeta>;          // keyed by on-chain planId (bytes32 hex)
+  subMeta: Map<string, SubMeta>;            // keyed by on-chain subscriptionId
+  cancelledByMerchant: Set<string>;         // planId hashes where merchant deactivated locally
   state: AppState;
   schedulerStarted: boolean;
 }
@@ -21,9 +33,9 @@ declare global {
 export function getStore(): GlobalStore {
   if (!globalThis.__pulseStore) {
     globalThis.__pulseStore = {
-      plans: [],
-      subscriptions: [],
-      transactions: [],
+      planMeta: new Map(),
+      subMeta: new Map(),
+      cancelledByMerchant: new Set(),
       state: { testMode: getPulseConfig().testMode },
       schedulerStarted: false,
     };

@@ -18,20 +18,37 @@ interface Props {
   onCreated: () => void;
 }
 
+interface FundedAccount {
+  name: string;
+  address: string;
+  ethBalance: number;
+  usdcBalance: number;
+}
+
 export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props) {
   const { toast } = useToast();
   const activePlans = plans.filter((p) => p.active);
+  const [accounts, setAccounts] = React.useState<FundedAccount[]>([]);
   const [customer, setCustomer] = React.useState("");
   const [planId, setPlanId] = React.useState("");
   const [spendCap, setSpendCap] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    if (open) {
-      setCustomer("");
-      setSpendCap("");
-      setPlanId(activePlans[0]?.id ?? "");
-    }
+    if (!open) return;
+    setSpendCap("");
+    setPlanId(activePlans[0]?.id ?? "");
+    api<FundedAccount[]>("GET", "/api/accounts")
+      .then((list) => {
+        setAccounts(list);
+        // Default to the first non-deployer account (a real "customer").
+        const firstUser = list.find((a) => !a.name.toLowerCase().includes("deployer"));
+        setCustomer(firstUser?.address ?? list[0]?.address ?? "");
+      })
+      .catch(() => {
+        setAccounts([]);
+        setCustomer("");
+      });
   }, [open, activePlans]);
 
   async function handleSubmit() {
@@ -61,14 +78,26 @@ export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props)
         <DialogHeader title="Create Subscription" onClose={() => onOpenChange(false)} />
         <DialogBody className="space-y-4">
           <div>
-            <Label>Customer address</Label>
-            <Input
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
-              placeholder="0x…"
-              className="font-mono text-[12.5px]"
-            />
-            <div className="mt-1 text-[11.5px] text-slate-500">Wallet address of the subscriber</div>
+            <Label>Customer</Label>
+            {accounts.length > 0 ? (
+              <Select value={customer} onChange={(e) => setCustomer(e.target.value)}>
+                {accounts.map((a) => (
+                  <option key={a.address} value={a.address}>
+                    {a.name} — {a.address.slice(0, 6)}…{a.address.slice(-4)} ({a.usdcBalance.toFixed(2)} USDC)
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                value={customer}
+                onChange={(e) => setCustomer(e.target.value)}
+                placeholder="0x…"
+                className="font-mono text-[12.5px]"
+              />
+            )}
+            <div className="mt-1 text-[11.5px] text-slate-500">
+              Funded local test accounts (10,000 USDC each, pre-approved).
+            </div>
           </div>
           <div>
             <Label>Product</Label>

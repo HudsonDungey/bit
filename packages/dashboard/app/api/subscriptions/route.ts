@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
-import { randomUUID } from "node:crypto";
+import type { Hex } from "viem";
+import { decodeEventLog } from "viem";
 import { getStore } from "@/lib/store";
 import { ensureSchedulerStarted } from "@/lib/scheduler";
-import type { Subscription } from "@/lib/types";
+import { listSubscriptions } from "@/lib/chain-reads";
+import {
+  publicClient,
+  walletFor,
+  findAccount,
+  MANAGER_ADDRESS,
+  managerAbi,
+  usdcUnits,
+} from "@/lib/chain";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   ensureSchedulerStarted();
-  return NextResponse.json(getStore().subscriptions);
+  const subs = await listSubscriptions();
+  return NextResponse.json(subs);
 }
 
 export async function POST(req: Request) {
@@ -20,27 +30,66 @@ export async function POST(req: Request) {
     customer?: string;
     spendCap?: number | null;
   };
-  const plan = store.plans.find((p) => p.id === b.planId && p.active);
-  if (!plan) return NextResponse.json({ error: "plan not found or inactive" }, { status: 400 });
-  if (!b.customer) return NextResponse.json({ error: "customer is required" }, { status: 400 });
 
-  const exists = store.subscriptions.find(
-    (s) => s.planId === b.planId && s.customer === b.customer && s.status === "active",
-  );
-  if (exists) return NextResponse.json({ error: "already subscribed" }, { status: 409 });
+  if (!b.planId || !/^0x[0-9a-fA-F]{64}$/.test(b.planId)) {
+    return NextResponse.json({ error: "valid planId required" }, { status: 400 });
+  }
+  if (!b.customer) {
+    return NextResponse.json({ error: "customer is required" }, { status: 400 });
+  }
 
-  const sub: Subscription = {
-    id: randomUUID(),
-    planId: plan.id,
-    planName: plan.name,
-    customer: String(b.customer),
-    spendCap: b.spendCap ? Number(b.spendCap) : null,
-    chargeCount: 0,
-    totalPaid: 0,
-    nextChargeAt: Date.now() / 1000,
-    status: "active",
-    createdAt: new Date().toISOString(),
-  };
-  store.subscriptions.push(sub);
-  return NextResponse.json(sub, { status: 201 });
+  const acct = findAccount(b.customer);
+  if (!acct) {
+    return NextResponse.json(
+      {
+        error:
+          "customer must be one of the funded anvil accounts. " +
+          "GET /api/accounts to see the list.",
+      },
+      { status: 400 },
+    );
+  }
+
+  const planId = b.planId as Hex;
+  const totalSpendCap = b.spendCap ? usdcUnits(Number(b.spendCap)) : 0n;
+  const wallet = walletFor(acct.privateKey);
+
+  try {
+    const hash = await wallet.writeContract({
+      address: MANAGER_ADDRESS,
+      abi: managerAbi,
+      functionName: "subscribe",
+      args: [planId, totalSpendCap],
+      account: wallet.account!,
+      chain: wallet.chain,
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+    let subId: Hex | undefined;
+    for (const log of receipt.logs) {
+      try {
+        const decoded = decodeEventLog({ abi: managerAbi, data: log.data, topics: log.topics });
+        if (decoded.eventName === "Subscribed") {
+          subId = (decoded.args as { subscriptionId: Hex }).subscriptionId;
+          break;
+        }
+      } catch {
+        // skip
+      }
+    }
+    if (!subId) {
+      return NextResponse.json({ error: "Subscribed event not found" }, { status: 500 });
+    }
+
+    store.subMeta.set(subId.toLowerCase(), { createdAt: new Date().toISOString() });
+    const subs = await listSubscriptions();
+    const created = subs.find((s) => s.id.toLowerCase() === subId!.toLowerCase());
+    return NextResponse.json(created ?? { id: subId }, { status: 201 });
+  } catch (err) {
+    const msg = (err as Error).message ?? String(err);
+    if (msg.includes("AlreadySubscribed")) {
+      return NextResponse.json({ error: "already subscribed" }, { status: 409 });
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
