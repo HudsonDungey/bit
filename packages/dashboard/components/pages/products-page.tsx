@@ -9,9 +9,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm";
-import { api } from "@/lib/api";
+import { usePulseActions } from "@/lib/wallet-actions";
 import { fmt$ } from "@/lib/format";
 import type { IntervalDef, Plan } from "@/lib/types";
+import type { Hex } from "viem";
 import { CreatePlanDialog } from "@/components/dialogs/create-plan-dialog";
 
 interface Props {
@@ -24,33 +25,30 @@ interface Props {
 export function ProductsPage({ plans, testIntervals, productionIntervals, refresh }: Props) {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const actions = usePulseActions();
   const [createOpen, setCreateOpen] = React.useState(false);
+  const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   async function deactivate(id: string) {
+    if (!actions.account.address) return toast("Connect your merchant wallet first", "error");
     const ok = await confirm({
       title: "Deactivate plan?",
       description:
-        "All active subscriptions for this plan will be cancelled. This cannot be undone.",
+        "Future charges for subscribers on this plan will revert. Existing subscriptions can still be cancelled. This is one-way — to re-enable, create a new plan.",
       okLabel: "Deactivate",
       danger: true,
     });
     if (!ok) return;
+    setPendingId(id);
     try {
-      await api("POST", `/api/plans/${id}/deactivate`);
+      toast("Confirm deactivation in your wallet…", "success");
+      await actions.deactivatePlan(id as Hex);
       toast("Plan deactivated", "success");
       refresh();
     } catch (e) {
       toast((e as Error).message, "error");
-    }
-  }
-
-  async function activate(id: string) {
-    try {
-      await api("POST", `/api/plans/${id}/activate`);
-      toast("Plan activated", "success");
-      refresh();
-    } catch (e) {
-      toast((e as Error).message, "error");
+    } finally {
+      setPendingId(null);
     }
   }
 
@@ -117,13 +115,16 @@ export function ProductsPage({ plans, testIntervals, productionIntervals, refres
                   </TableCell>
                   <TableCell>
                     {p.active ? (
-                      <Button variant="danger" size="sm" onClick={() => deactivate(p.id)}>
-                        Deactivate
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => deactivate(p.id)}
+                        disabled={pendingId === p.id}
+                      >
+                        {pendingId === p.id ? "Deactivating…" : "Deactivate"}
                       </Button>
                     ) : (
-                      <Button variant="outline" size="sm" onClick={() => activate(p.id)}>
-                        Activate
-                      </Button>
+                      <span className="text-xs text-slate-500">Cannot re-activate</span>
                     )}
                   </TableCell>
                 </TableRow>

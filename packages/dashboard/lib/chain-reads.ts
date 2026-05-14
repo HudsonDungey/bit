@@ -1,10 +1,20 @@
 import type { Hex, Log } from "viem";
-import { publicClient, MANAGER_ADDRESS, managerAbi, usdcDisplay, walletFor, DEPLOYER_ADDRESS } from "./chain";
+import {
+  publicClient,
+  MANAGER_ADDRESS,
+  managerAbi,
+  usdcDisplay,
+  executorWallet,
+  DEPLOYMENT_BLOCK,
+  NETWORK,
+} from "./chain";
 import { getStore } from "./store";
 import type { Plan, Subscription, Transaction } from "./types";
 
-// Cache the start block (always 0 on a fresh anvil) and incrementally extend.
-let lastSyncedBlock: bigint = 0n;
+// Cache the start block. On Sepolia we start from the configured deploymentBlock to
+// avoid scanning ~7M blocks of pre-deployment history. On anvil we start from 0.
+let lastSyncedBlock: bigint = DEPLOYMENT_BLOCK > 0n ? DEPLOYMENT_BLOCK - 1n : 0n;
+const INITIAL_FROM_BLOCK = lastSyncedBlock;
 const planEvents: { planId: Hex; merchant: Hex; token: Hex; amount: bigint; period: bigint; feeBps: number; blockNumber: bigint }[] = [];
 const planDeactivations = new Set<string>();
 const subEvents: { subId: Hex; planId: Hex; customer: Hex; totalSpendCap: bigint; blockNumber: bigint }[] = [];
@@ -34,17 +44,37 @@ async function timestampOf(blockNumber: bigint): Promise<number> {
   return ts;
 }
 
+// Public RPCs cap getLogs ranges — the free thirdweb fallback is 1000, Alchemy free
+// is ~500 for filtered topics. 500 blocks is the safe slice that works on both.
+const MAX_LOG_RANGE = NETWORK === "sepolia" ? 500n : 50_000n;
+
+const ZERO_ADDR = "0x0000000000000000000000000000000000000000";
+
 async function syncEvents() {
+  // Don't try to scan if the user hasn't configured the manager address yet.
+  // Returns silently — the UI will just show empty plans/subs/transactions.
+  if (MANAGER_ADDRESS.toLowerCase() === ZERO_ADDR) return;
+
   const head = await publicClient.getBlockNumber();
   if (head <= lastSyncedBlock) return;
-  const fromBlock = lastSyncedBlock === 0n ? 0n : lastSyncedBlock + 1n;
+  let cursor = lastSyncedBlock + 1n;
 
-  const logs = await publicClient.getLogs({
-    address: MANAGER_ADDRESS,
-    fromBlock,
-    toBlock: head,
-    events: managerAbi.filter((x) => x.type === "event") as never,
-  });
+  const events = managerAbi.filter((x) => x.type === "event") as never;
+  while (cursor <= head) {
+    const sliceEnd = cursor + MAX_LOG_RANGE - 1n < head ? cursor + MAX_LOG_RANGE - 1n : head;
+    const logs = await publicClient.getLogs({
+      address: MANAGER_ADDRESS,
+      fromBlock: cursor,
+      toBlock: sliceEnd,
+      events,
+    });
+    await ingestLogs(logs);
+    cursor = sliceEnd + 1n;
+  }
+  lastSyncedBlock = head;
+}
+
+async function ingestLogs(logs: unknown[]) {
 
   for (const log of logs as unknown as Array<Log & { eventName: string; args: Record<string, unknown> }>) {
     const name = log.eventName;
@@ -88,15 +118,14 @@ async function syncEvents() {
       });
     }
   }
-  lastSyncedBlock = head;
 }
 
-/// Detect anvil restart (head went backwards) and reset caches.
+/// Detect chain reset (head went backwards — only really applies on anvil) and reset caches.
 async function resyncIfReset() {
   try {
     const head = await publicClient.getBlockNumber();
     if (head < lastSyncedBlock) {
-      lastSyncedBlock = 0n;
+      lastSyncedBlock = INITIAL_FROM_BLOCK;
       planEvents.length = 0;
       planDeactivations.clear();
       subEvents.length = 0;
@@ -104,7 +133,7 @@ async function resyncIfReset() {
       chargeEvents.length = 0;
     }
   } catch {
-    // ignore — anvil may be temporarily down
+    // ignore — RPC may be temporarily down
   }
 }
 
@@ -238,10 +267,16 @@ export async function dueSubscriptions(): Promise<{ subId: Hex; merchant: Hex }[
   return out;
 }
 
-/// Trigger a single charge as the deployer (acting as executor).
+/// Trigger a single charge from the executor wallet (env-configured Sepolia EOA).
+/// Throws a clear error if EXECUTOR_PRIVATE_KEY isn't configured.
 export async function chargeOnce(subId: Hex): Promise<Hex> {
-  const deployer = (await import("./chain")).accounts[0];
-  const wallet = walletFor(deployer.privateKey);
+  const wallet = executorWallet();
+  if (!wallet) {
+    throw new Error(
+      "executor wallet not configured — set EXECUTOR_PRIVATE_KEY in .env.local " +
+        "(a dedicated Sepolia EOA funded with a small amount of ETH for gas).",
+    );
+  }
   const hash = await wallet.writeContract({
     address: MANAGER_ADDRESS,
     abi: managerAbi,
@@ -255,8 +290,6 @@ export async function chargeOnce(subId: Hex): Promise<Hex> {
   await syncEvents();
   return hash;
 }
-
-export { DEPLOYER_ADDRESS };
 
 // ─── Income time series ─────────────────────────────────────────────────────
 

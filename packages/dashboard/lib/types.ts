@@ -12,6 +12,19 @@ export interface PulseConfig {
   maxTransactions: number;
 }
 
+export type Network = "sepolia" | "anvil";
+
+export interface PulseLocalConfig {
+  network: Network;
+  rpc: { alchemyKey: string | null; fullUrlOverride: string | null };
+  walletConnectProjectId: string | null;
+  contracts: { manager: `0x${string}`; usdc: `0x${string}`; feeRecipient: `0x${string}` };
+  deploymentBlock: bigint;
+  merchant: { address: `0x${string}`; label: string };
+  executor: { privateKey: `0x${string}` | null };
+  testAddresses: Array<{ label: string; address: `0x${string}` }>;
+}
+
 export interface Plan {
   id: string;
   name: string;

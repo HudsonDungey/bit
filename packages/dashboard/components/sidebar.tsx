@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { LayoutDashboard, Package, RefreshCw, ArrowLeftRight, Zap } from "lucide-react";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { cn } from "@/lib/utils";
 import { Switch } from "./ui/switch";
 
@@ -81,8 +82,15 @@ export function Sidebar({ page, onPageChange, testMode, onTestModeChange }: Side
       </div>
 
       {/* Footer */}
-      <div className="relative border-t border-white/5 px-5 py-4">
-        <div className="flex items-center justify-between gap-2">
+      <div className="relative border-t border-white/5 px-3 py-4">
+        <div className="mb-3 px-2">
+          <ConnectButton
+            chainStatus="icon"
+            accountStatus={{ smallScreen: "avatar", largeScreen: "full" }}
+            showBalance={{ smallScreen: false, largeScreen: false }}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2 px-2">
           <span className="text-xs font-medium text-[#9aa3c7]">Test mode</span>
           <Switch checked={testMode} onCheckedChange={onTestModeChange} />
         </div>

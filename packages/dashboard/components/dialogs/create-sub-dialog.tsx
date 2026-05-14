@@ -8,8 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
-import { fmt$ } from "@/lib/format";
-import type { Plan } from "@/lib/types";
+import { fmt$, fmtAddr } from "@/lib/format";
+import { usePulseActions } from "@/lib/wallet-actions";
+import type { Plan, Subscription } from "@/lib/types";
+import type { Hex } from "viem";
 
 interface Props {
   open: boolean;
@@ -18,50 +20,43 @@ interface Props {
   onCreated: () => void;
 }
 
-interface FundedAccount {
-  name: string;
-  address: string;
-  ethBalance: number;
-  usdcBalance: number;
-}
-
 export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props) {
   const { toast } = useToast();
+  const actions = usePulseActions();
   const activePlans = plans.filter((p) => p.active);
-  const [accounts, setAccounts] = React.useState<FundedAccount[]>([]);
-  const [customer, setCustomer] = React.useState("");
   const [planId, setPlanId] = React.useState("");
   const [spendCap, setSpendCap] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
+  const [step, setStep] = React.useState<"approve" | "subscribe" | null>(null);
 
   React.useEffect(() => {
     if (!open) return;
     setSpendCap("");
     setPlanId(activePlans[0]?.id ?? "");
-    api<FundedAccount[]>("GET", "/api/accounts")
-      .then((list) => {
-        setAccounts(list);
-        // Default to the first non-deployer account (a real "customer").
-        const firstUser = list.find((a) => !a.name.toLowerCase().includes("deployer"));
-        setCustomer(firstUser?.address ?? list[0]?.address ?? "");
-      })
-      .catch(() => {
-        setAccounts([]);
-        setCustomer("");
-      });
+    setStep(null);
   }, [open, activePlans]);
 
   async function handleSubmit() {
-    if (!customer.trim()) return toast("Customer address is required", "error");
+    if (!actions.account.address) return toast("Connect your wallet first", "error");
     if (!planId) return toast("Please select a plan", "error");
 
     setSubmitting(true);
     try {
-      await api("POST", "/api/subscriptions", {
-        customer: customer.trim(),
-        planId,
-        spendCap: spendCap.trim() ? parseFloat(spendCap) : null,
-      });
+      const { subscriptionId } = await actions.subscribe(
+        {
+          planId: planId as Hex,
+          spendCapUsdc: spendCap.trim() ? parseFloat(spendCap) : null,
+        },
+        (s) => {
+          setStep(s);
+          toast(
+            s === "approve" ? "Approving USDC — confirm in your wallet…" : "Subscribing — confirm in your wallet…",
+            "success",
+          );
+        },
+      );
+      // Record off-chain createdAt for nicer display.
+      await api<Subscription>("POST", "/api/subscriptions", { subscriptionId });
       toast("Subscription created", "success");
       onCreated();
       onOpenChange(false);
@@ -69,8 +64,11 @@ export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props)
       toast((e as Error).message, "error");
     } finally {
       setSubmitting(false);
+      setStep(null);
     }
   }
+
+  const connected = actions.account.address;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,25 +76,12 @@ export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props)
         <DialogHeader title="Create Subscription" onClose={() => onOpenChange(false)} />
         <DialogBody className="space-y-4">
           <div>
-            <Label>Customer</Label>
-            {accounts.length > 0 ? (
-              <Select value={customer} onChange={(e) => setCustomer(e.target.value)}>
-                {accounts.map((a) => (
-                  <option key={a.address} value={a.address}>
-                    {a.name} — {a.address.slice(0, 6)}…{a.address.slice(-4)} ({a.usdcBalance.toFixed(2)} USDC)
-                  </option>
-                ))}
-              </Select>
-            ) : (
-              <Input
-                value={customer}
-                onChange={(e) => setCustomer(e.target.value)}
-                placeholder="0x…"
-                className="font-mono text-[12.5px]"
-              />
-            )}
+            <Label>Customer (your connected wallet)</Label>
+            <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 font-mono text-[12.5px] text-slate-700">
+              {connected ? fmtAddr(connected) : "Not connected — use the Connect Wallet button"}
+            </div>
             <div className="mt-1 text-[11.5px] text-slate-500">
-              Funded local test accounts (10,000 USDC each, pre-approved).
+              The subscription will be created on-chain from this address. A one-time USDC approval is requested if needed.
             </div>
           </div>
           <div>
@@ -129,8 +114,19 @@ export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props)
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting || activePlans.length === 0}>
-            {submitting ? "Subscribing…" : "Subscribe"}
+          <Button
+            onClick={handleSubmit}
+            disabled={submitting || activePlans.length === 0 || !connected}
+          >
+            {!connected
+              ? "Connect wallet"
+              : step === "approve"
+                ? "Approving…"
+                : step === "subscribe"
+                  ? "Subscribing…"
+                  : submitting
+                    ? "Confirming…"
+                    : "Subscribe"}
           </Button>
         </DialogFooter>
       </DialogContent>

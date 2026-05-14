@@ -11,9 +11,10 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { PageHeader } from "@/components/page-header";
 import { useToast } from "@/components/ui/toast";
 import { useConfirm } from "@/components/ui/confirm";
-import { api } from "@/lib/api";
+import { usePulseActions } from "@/lib/wallet-actions";
 import { fmt$, fmtAddr, fmtNextCharge } from "@/lib/format";
 import type { Plan, Subscription } from "@/lib/types";
+import type { Hex } from "viem";
 import { CreateSubDialog } from "@/components/dialogs/create-sub-dialog";
 
 interface Props {
@@ -25,28 +26,45 @@ interface Props {
 export function SubscriptionsPage({ subscriptions, plans, refresh }: Props) {
   const { toast } = useToast();
   const confirm = useConfirm();
+  const actions = usePulseActions();
   const [createOpen, setCreateOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [statusF, setStatusF] = React.useState("");
+  const [pendingId, setPendingId] = React.useState<string | null>(null);
 
   let filtered = subscriptions;
   if (search) filtered = filtered.filter((s) => s.customer.toLowerCase().includes(search.toLowerCase()));
   if (statusF) filtered = filtered.filter((s) => s.status === statusF);
 
-  async function cancel(id: string) {
+  async function cancel(id: string, customer: string) {
+    if (!actions.account.address) return toast("Connect your wallet first", "error");
+    const connected = actions.account.address.toLowerCase();
+    if (connected !== customer.toLowerCase()) {
+      // The contract permits either customer or merchant to cancel. We can't cheaply
+      // check the merchant here without an extra read; let the on-chain revert speak
+      // if the connected wallet isn't authorized.
+      toast(
+        "Heads-up: only the customer or merchant for this sub can cancel. Make sure your connected wallet is one of them.",
+        "success",
+      );
+    }
     const ok = await confirm({
       title: "Cancel subscription?",
-      description: "The customer will no longer be charged. You can re-subscribe them later.",
+      description: "The customer will no longer be charged. This is permanent on chain.",
       okLabel: "Cancel subscription",
       danger: true,
     });
     if (!ok) return;
+    setPendingId(id);
     try {
-      await api("POST", `/api/subscriptions/${id}/cancel`);
+      toast("Confirm cancellation in your wallet…", "success");
+      await actions.cancel(id as Hex);
       toast("Subscription cancelled", "success");
       refresh();
     } catch (e) {
       toast((e as Error).message, "error");
+    } finally {
+      setPendingId(null);
     }
   }
 
@@ -120,8 +138,13 @@ export function SubscriptionsPage({ subscriptions, plans, refresh }: Props) {
                     </TableCell>
                     <TableCell>
                       {s.status === "active" && (
-                        <Button variant="danger" size="sm" onClick={() => cancel(s.id)}>
-                          Cancel
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => cancel(s.id, s.customer)}
+                          disabled={pendingId === s.id}
+                        >
+                          {pendingId === s.id ? "Cancelling…" : "Cancel"}
                         </Button>
                       )}
                     </TableCell>

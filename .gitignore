@@ -6,6 +6,11 @@ out/
 .env
 .env.local
 *.log
+# Local Sepolia config — contains API keys + (optionally) executor private key
+pulse.local.json
+packages/dashboard/pulse.local.json
+packages/dashboard/.env.local
+contracts/.env
 .DS_Store
 tsconfig.tsbuildinfo
 packages/*/tsconfig.tsbuildinfo

@@ -1,6 +1,7 @@
 import { getPulseConfig } from "./config";
 import { getStore } from "./store";
 import { dueSubscriptions, chargeOnce } from "./chain-reads";
+import { executorAddress, NETWORK } from "./chain";
 
 let running = false;
 
@@ -40,5 +41,16 @@ export function ensureSchedulerStarted() {
   const store = getStore();
   if (store.schedulerStarted) return;
   store.schedulerStarted = true;
+  const executor = executorAddress();
+  if (!executor) {
+    // eslint-disable-next-line no-console
+    console.warn(
+      `[scheduler] EXECUTOR_PRIVATE_KEY not configured — automatic charging is OFF on ${NETWORK}. ` +
+        "Set EXECUTOR_PRIVATE_KEY in .env.local (a dedicated EOA with a small amount of ETH for gas) to enable.",
+    );
+    return;
+  }
+  // eslint-disable-next-line no-console
+  console.log(`[scheduler] starting on ${NETWORK}, executor=${executor}`);
   tick();
 }

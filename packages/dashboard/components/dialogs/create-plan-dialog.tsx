@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
-import type { IntervalDef, Plan } from "@/lib/types";
+import { usePulseActions } from "@/lib/wallet-actions";
+import type { IntervalDef } from "@/lib/types";
 
 interface Props {
   open: boolean;
@@ -26,6 +27,7 @@ export function CreatePlanDialog({
   onCreated,
 }: Props) {
   const { toast } = useToast();
+  const actions = usePulseActions();
   const [name, setName] = React.useState("");
   const [desc, setDesc] = React.useState("");
   const [price, setPrice] = React.useState("");
@@ -58,13 +60,20 @@ export function CreatePlanDialog({
 
     setSubmitting(true);
     try {
-      await api<Plan>("POST", "/api/plans", {
+      toast("Confirm in your wallet…", "success");
+      const { planId } = await actions.createPlan({
+        priceUsdc: priceNum,
+        periodSeconds: intervalSeconds,
+        feeBps: parseInt(feeBps, 10),
+      });
+      // Persist off-chain metadata (name, description, interval label, cancel-after)
+      // so the UI can show "Pro Plan" instead of "Plan 0x12345…".
+      await api("POST", "/api/plans", {
+        planId,
         name: name.trim(),
         description: desc.trim(),
-        price: priceNum,
-        feeBps: parseInt(feeBps, 10),
-        intervalSeconds,
         intervalLabel,
+        intervalSeconds,
         cancelAfterCharges,
       });
       toast(`Product "${name.trim()}" created`, "success");
@@ -157,8 +166,8 @@ export function CreatePlanDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={submitting}>
-            {submitting ? "Creating…" : "Create Product"}
+          <Button onClick={handleSubmit} disabled={submitting || !actions.account.address}>
+            {submitting ? "Confirming…" : actions.account.address ? "Create Product" : "Connect wallet"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -3,6 +3,8 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { BgMesh } from "@/components/bg-mesh";
 import { ToastProvider } from "@/components/ui/toast";
 import { ConfirmProvider } from "@/components/ui/confirm";
+import { Providers } from "./providers";
+import { getLocalConfig, publicView } from "@/lib/local-config";
 import "./globals.css";
 
 const inter = Inter({
@@ -23,13 +25,16 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const publicCfg = publicView(getLocalConfig());
   return (
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`}>
       <body className="min-h-screen font-sans">
         <BgMesh />
-        <ToastProvider>
-          <ConfirmProvider>{children}</ConfirmProvider>
-        </ToastProvider>
+        <Providers config={publicCfg}>
+          <ToastProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </ToastProvider>
+        </Providers>
       </body>
     </html>
   );

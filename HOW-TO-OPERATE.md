@@ -1,8 +1,116 @@
-# How to operate the Pulse local testbed
+# How to operate Pulse
+
+Pulse runs in two modes:
+
+- **Sepolia (real wallets, RainbowKit + wagmi)** — the main path. Your MetaMask signs every plan/subscribe/cancel; an Alchemy RPC powers reads; an off-chain executor key calls `charge()` for due subscriptions. → [Sepolia setup](#sepolia-setup) below.
+- **Anvil (local testbed, server-signed)** — the older fast-feedback path. A forked local chain with five funded accounts whose keys live in `deployments.json`. → [Anvil testbed](#anvil-testbed).
+
+Pick the mode by setting `network` in `packages/dashboard/pulse.local.json` to `"sepolia"` (default) or `"anvil"`.
+
+---
+
+## Sepolia setup
+
+### 1. Get keys
+
+- **Alchemy** API key — create an app on "Ethereum Sepolia" at <https://dashboard.alchemy.com/>.
+- **WalletConnect Cloud** project id — <https://cloud.reown.com/>. Required for any non-injected wallet.
+- **Etherscan** API key (optional, for `--verify`) — <https://etherscan.io/myapikey>.
+- A **Sepolia EOA with some ETH** for deployment (faucet: <https://sepoliafaucet.com/>). This becomes the merchant + fee recipient unless you change it.
+- A **second Sepolia EOA** (also funded with a small amount of ETH) to serve as the off-chain executor that calls `manager.charge`.
+
+### 2. Deploy contracts
+
+```bash
+cd contracts
+PRIVATE_KEY=0xYOUR_DEPLOYER_KEY \
+forge script script/DeploySepolia.s.sol \
+    --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY \
+    --broadcast \
+    -vvvv
+```
+
+The script prints addresses + the deployment block. Note all four (manager, USDC, feeRecipient, deploymentBlock).
+
+### 3. Configure the dashboard
+
+```bash
+cd packages/dashboard
+cp pulse.local.example.json pulse.local.json
+cp .env.local.example .env.local
+```
+
+Edit `pulse.local.json`:
+
+```jsonc
+{
+  "network": "sepolia",
+  "rpc": { "alchemyKey": "from-alchemy-dashboard" },
+  "walletConnectProjectId": "from-walletconnect-cloud",
+  "contracts": {
+    "manager": "0x...",           // from forge script output
+    "usdc":    "0x...",
+    "feeRecipient": "0x..."
+  },
+  "deploymentBlock": 1234567,      // from forge script output
+  "merchant": {
+    "address": "0xYourMetaMaskAddress",
+    "label": "My Merchant"
+  },
+  "testAddresses": []              // optional extras you want listed in /api/accounts
+}
+```
+
+Edit `.env.local` (preferred over JSON for secrets):
+
+```bash
+NEXT_PUBLIC_ALCHEMY_KEY=...
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
+EXECUTOR_PRIVATE_KEY=0x...        # the SECOND Sepolia EOA, NOT your merchant key
+```
+
+### 4. Run the dashboard
+
+```bash
+yarn workspace @pulse/dashboard dev -p 3001
+```
+
+Open <http://localhost:3001>. Click **Connect Wallet** in the sidebar — MetaMask will prompt for connection and ask you to switch to Sepolia.
+
+### 5. Use it
+
+- **Create a plan** → triggers `manager.createPlan` signed by your MetaMask. Off-chain name/description gets POSTed to `/api/plans` keyed by the on-chain planId.
+- **Subscribe** → triggers a one-time `usdc.approve(manager, max)` (if no allowance yet), then `manager.subscribe(planId, spendCap)`. Both signed by the currently-connected wallet (the customer).
+- **Cancel** → triggers `manager.cancel(subId)`. Sign from either the customer or merchant wallet.
+- **Charges** → the off-chain scheduler ticks every 30 s (or 1 s in test mode) and calls `manager.charge(subId)` from your EXECUTOR_PRIVATE_KEY for any sub where `nextChargeAt <= now`.
+
+### MockUSDC notes for Sepolia
+
+The deploy script uses `MockUSDC`, a mintable test token. Anyone can mint to themselves with:
+
+```bash
+USDC=0x...   # from pulse.local.json
+cast send $USDC "mint(address,uint256)" 0xYourAddress 100000000 \
+    --private-key 0xYourKey \
+    --rpc-url https://eth-sepolia.g.alchemy.com/v2/YOUR_KEY
+# = mint 100 USDC (100 * 1e6) to 0xYourAddress
+```
+
+If you'd rather use Circle's official Sepolia USDC (`0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`), edit `DeploySepolia.s.sol` to skip the MockUSDC deployment and reference that address in `pulse.local.json` — you'll need to bridge in real testnet USDC from <https://faucet.circle.com/>.
+
+---
+
+## Anvil testbed
 
 End-to-end guide for spinning up a local anvil chain, deploying the
 `PulseSubscriptionManager` + `MockUSDC` contracts, and driving them through
 the Next.js dashboard.
+
+> **Heads up — wagmi rewire.** All writes (createPlan, subscribe, cancel, deactivate) are now signed by the **connected wallet via RainbowKit**, regardless of network. To use the funded anvil accounts in this mode, **import the anvil private keys into MetaMask** and add a custom network for `http://127.0.0.1:8545` (chain id `31337`). The "funded accounts dropdown" in the subscribe dialog has been replaced by "your connected wallet".
+>
+> To switch to this mode, set `"network": "anvil"` in `packages/dashboard/pulse.local.json`. The dashboard reads contract addresses from `pulse.local.json` regardless of network — paste the addresses the local deploy script prints under `contracts.manager` / `contracts.usdc`.
+>
+> The off-chain scheduler also no longer uses `anvil[0]` implicitly — set `EXECUTOR_PRIVATE_KEY` in `.env.local` to one of the anvil keys (e.g. `0xac0974…`) to enable automatic charging.
 
 ---
 
