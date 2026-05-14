@@ -3,31 +3,75 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pulse — Dashboard</title>
+  <title>Pulse — Stablecoin Subscriptions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
+<!-- Ambient animated background -->
+<div class="bg-mesh" aria-hidden="true"></div>
+
 <!-- ── Sidebar ── -->
 <nav id="sidebar">
   <div class="sidebar-brand">
-    <h1>⚡ Pulse</h1>
-    <p>Stablecoin Subscriptions</p>
+    <div class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L4.5 13.5h7L11 22l8.5-11.5h-7L13 2z" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Pulse</h1>
+      <p>Stablecoin Subscriptions</p>
+    </div>
   </div>
+
   <div class="sidebar-nav">
     <div class="nav-item active" data-page="dashboard">
-      <span class="nav-icon">▦</span> Dashboard
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="5" rx="1.5"/>
+          <rect x="14" y="12" width="7" height="9" rx="1.5"/>
+          <rect x="3" y="16" width="7" height="5" rx="1.5"/>
+        </svg>
+      </span>
+      <span>Dashboard</span>
     </div>
     <div class="nav-item" data-page="products">
-      <span class="nav-icon">◈</span> Products
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+          <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>
+        </svg>
+      </span>
+      <span>Products</span>
     </div>
     <div class="nav-item" data-page="subscriptions">
-      <span class="nav-icon">↻</span> Subscriptions
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 4v6h-6"/>
+          <path d="M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+        </svg>
+      </span>
+      <span>Subscriptions</span>
     </div>
     <div class="nav-item" data-page="transactions">
-      <span class="nav-icon">⇄</span> Transactions
+      <span class="nav-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="17 1 21 5 17 9"/>
+          <path d="M3 11V9a4 4 0 014-4h14"/>
+          <polyline points="7 23 3 19 7 15"/>
+          <path d="M21 13v2a4 4 0 01-4 4H3"/>
+        </svg>
+      </span>
+      <span>Transactions</span>
     </div>
   </div>
+
   <div class="sidebar-footer">
     <div class="test-mode-toggle">
       <span>Test mode</span>
@@ -41,7 +85,7 @@
 
 <!-- ── Test mode banner ── -->
 <div id="test-banner">
-  ⚠ Test mode active — scheduler runs at accelerated intervals
+  ⚡ Test mode active — scheduler runs at accelerated intervals
 </div>
 
 <!-- ── Main ── -->
@@ -59,28 +103,67 @@
 
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="label">Total Revenue</div>
-        <div class="value" id="stat-revenue">$0.00</div>
+        <div class="label">
+          <span class="label-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+            </svg>
+          </span>
+          Total Revenue
+        </div>
+        <div class="value" id="stat-revenue" data-format="money">$0.00</div>
         <div class="sub">net to merchant</div>
       </div>
       <div class="stat-card">
-        <div class="label">Total Fees</div>
-        <div class="value" id="stat-fees">$0.00</div>
+        <div class="label">
+          <span class="label-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+            </svg>
+          </span>
+          Total Fees
+        </div>
+        <div class="value" id="stat-fees" data-format="money">$0.00</div>
         <div class="sub">protocol earnings</div>
       </div>
       <div class="stat-card">
-        <div class="label">Total Charges</div>
-        <div class="value" id="stat-charges">0</div>
+        <div class="label">
+          <span class="label-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </span>
+          Total Charges
+        </div>
+        <div class="value" id="stat-charges" data-format="int">0</div>
         <div class="sub">successful</div>
       </div>
       <div class="stat-card">
-        <div class="label">Active Subs</div>
-        <div class="value" id="stat-subs">0</div>
+        <div class="label">
+          <span class="label-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </span>
+          Active Subs
+        </div>
+        <div class="value" id="stat-subs" data-format="int">0</div>
         <div class="sub">subscriptions</div>
       </div>
       <div class="stat-card">
-        <div class="label">Active Plans</div>
-        <div class="value" id="stat-plans">0</div>
+        <div class="label">
+          <span class="label-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/>
+              <path d="M3 9h18M9 21V9"/>
+            </svg>
+          </span>
+          Active Plans
+        </div>
+        <div class="value" id="stat-plans" data-format="int">0</div>
         <div class="sub">products</div>
       </div>
     </div>
@@ -114,7 +197,10 @@
         <h2>Products</h2>
         <p>Define billing plans and pricing</p>
       </div>
-      <button class="btn btn-primary" id="btn-create-plan">+ Create Product</button>
+      <button class="btn btn-primary" id="btn-create-plan">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create Product
+      </button>
     </div>
 
     <div class="card">
@@ -144,12 +230,15 @@
         <h2>Subscriptions</h2>
         <p>Active and historical customer subscriptions</p>
       </div>
-      <button class="btn btn-primary" id="btn-create-sub">+ Subscribe</button>
+      <button class="btn btn-primary" id="btn-create-sub">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Subscribe
+      </button>
     </div>
 
     <div class="card">
       <div class="filter-row">
-        <input id="sub-search" placeholder="Filter by customer…" style="width:220px" />
+        <input id="sub-search" placeholder="Filter by customer…" style="width:240px" />
         <select id="sub-status-filter">
           <option value="">All statuses</option>
           <option value="active">Active</option>
@@ -187,7 +276,7 @@
 
     <div class="card">
       <div class="filter-row">
-        <input id="tx-customer" placeholder="Filter by customer…" style="width:220px" />
+        <input id="tx-customer" placeholder="Filter by customer…" style="width:240px" />
         <select id="tx-status-filter">
           <option value="">All statuses</option>
           <option value="success">Success</option>
@@ -221,7 +310,9 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Create Product</h3>
-      <button class="modal-close" data-close="modal-plan">✕</button>
+      <button class="modal-close" data-close="modal-plan" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -268,7 +359,9 @@
   <div class="modal">
     <div class="modal-header">
       <h3>Create Subscription</h3>
-      <button class="modal-close" data-close="modal-sub">✕</button>
+      <button class="modal-close" data-close="modal-sub" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
     <div class="modal-body">
       <div class="form-group">
@@ -292,6 +385,28 @@
     </div>
   </div>
 </div>
+
+<!-- ── Confirm dialog ── -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="width: 400px;">
+    <div class="modal-header">
+      <h3 id="confirm-title">Are you sure?</h3>
+      <button class="modal-close" data-close="modal-confirm" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p class="confirm-text" id="confirm-text">This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" data-close="modal-confirm" id="btn-confirm-cancel">Cancel</button>
+      <button class="btn btn-danger" id="btn-confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ── -->
+<div class="toast-container" id="toast-container"></div>
 
 <script src="app.js"></script>
 </body>

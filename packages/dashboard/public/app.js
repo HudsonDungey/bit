@@ -2,6 +2,36 @@
 let appConfig = { testMode: false, testIntervals: [], productionIntervals: [] };
 let plans = [], subscriptions = [], transactions = [];
 let pollTimer = null;
+let lastTxIds = new Set();         // for highlighting newly-arrived transactions
+let statValues = {                 // for animated counters
+  "stat-revenue": 0, "stat-fees": 0, "stat-charges": 0, "stat-subs": 0, "stat-plans": 0,
+};
+
+// ── Ripple bubble effect ───────────────────────────────────────────────────────
+function attachRipple(el) {
+  el.addEventListener("pointerdown", (e) => {
+    const rect = el.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 1.2;
+    const ripple = document.createElement("span");
+    ripple.className = "ripple";
+    ripple.style.width = ripple.style.height = size + "px";
+    ripple.style.left = (e.clientX - rect.left - size / 2) + "px";
+    ripple.style.top  = (e.clientY - rect.top  - size / 2) + "px";
+    el.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 700);
+  });
+}
+
+function attachRipplesToAll() {
+  document.querySelectorAll(".btn:not([data-ripple])").forEach(b => {
+    b.dataset.ripple = "1";
+    attachRipple(b);
+  });
+  document.querySelectorAll(".nav-item:not([data-ripple])").forEach(b => {
+    b.dataset.ripple = "1";
+    attachRipple(b);
+  });
+}
 
 // ── Navigation ─────────────────────────────────────────────────────────────────
 document.querySelectorAll(".nav-item").forEach(item => {
@@ -42,7 +72,7 @@ function fmtTime(iso) {
 
 function fmtNextCharge(unixSec) {
   const diff = Math.round(unixSec - Date.now() / 1000);
-  if (diff <= 0) return '<span style="color:var(--warning)">now</span>';
+  if (diff <= 0) return '<span style="color:var(--warning); font-weight:600">now</span>';
   if (diff < 60) return "in " + diff + "s";
   if (diff < 3600) return "in " + Math.round(diff / 60) + "m";
   if (diff < 86400) return "in " + Math.round(diff / 3600) + "h";
@@ -58,6 +88,79 @@ function badge(status) {
   return `<span class="badge ${cls}">${status}</span>`;
 }
 
+// ── Animated number counter ────────────────────────────────────────────────────
+function animateNumber(el, target, opts = {}) {
+  const { duration = 600, format = "money" } = opts;
+  const key = el.id;
+  const start = statValues[key] ?? 0;
+  if (start === target) {
+    el.textContent = format === "money" ? fmt$(target) : String(Math.round(target));
+    return;
+  }
+  const t0 = performance.now();
+  function frame(now) {
+    const t = Math.min(1, (now - t0) / duration);
+    const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    const v = start + (target - start) * eased;
+    el.textContent = format === "money" ? fmt$(v) : String(Math.round(v));
+    if (t < 1) requestAnimationFrame(frame);
+    else {
+      el.textContent = format === "money" ? fmt$(target) : String(Math.round(target));
+      statValues[key] = target;
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+// ── Toasts (replaces alert) ────────────────────────────────────────────────────
+const ICONS = {
+  success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  error:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  warn:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>`,
+  info:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="17" x2="12" y2="17"/></svg>`,
+};
+
+function toast(message, kind = "info", title = "") {
+  const container = document.getElementById("toast-container");
+  const el = document.createElement("div");
+  el.className = "toast toast-" + kind;
+  el.innerHTML = `
+    <div class="toast-icon">${ICONS[kind] ?? ICONS.info}</div>
+    <div class="toast-body">${title ? `<strong>${title}</strong>` : ""}${message}</div>
+  `;
+  container.appendChild(el);
+  const remove = () => {
+    el.classList.add("removing");
+    setTimeout(() => el.remove(), 320);
+  };
+  setTimeout(remove, 4200);
+  el.addEventListener("click", remove);
+}
+
+// ── Confirm dialog (replaces window.confirm) ───────────────────────────────────
+function confirmDialog(title, text, okLabel = "Confirm", danger = true) {
+  return new Promise(resolve => {
+    document.getElementById("confirm-title").textContent = title;
+    document.getElementById("confirm-text").textContent = text;
+    const okBtn = document.getElementById("btn-confirm-ok");
+    const cancelBtn = document.getElementById("btn-confirm-cancel");
+    okBtn.textContent = okLabel;
+    okBtn.className = "btn " + (danger ? "btn-danger" : "btn-primary");
+    openModal("modal-confirm");
+
+    function cleanup(result) {
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      closeModal("modal-confirm");
+      resolve(result);
+    }
+    function onOk()     { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+  });
+}
+
 // ── Config / test mode ─────────────────────────────────────────────────────────
 const testToggle = document.getElementById("testModeToggle");
 const testBanner = document.getElementById("test-banner");
@@ -66,8 +169,9 @@ testToggle.addEventListener("change", async () => {
   try {
     appConfig = await api("POST", "/api/config", { testMode: testToggle.checked });
     updateBanner();
+    toast(testToggle.checked ? "Test mode enabled" : "Test mode disabled", "success");
   } catch (e) {
-    alert("Could not update test mode: " + e.message);
+    toast("Could not update test mode: " + e.message, "error");
     testToggle.checked = !testToggle.checked;
   }
 });
@@ -76,7 +180,7 @@ function updateBanner() {
   testToggle.checked = appConfig.testMode;
   if (appConfig.testMode) {
     testBanner.classList.add("show");
-    document.getElementById("main").style.paddingTop = "32px";
+    document.getElementById("main").style.paddingTop = "36px";
   } else {
     testBanner.classList.remove("show");
     document.getElementById("main").style.paddingTop = "";
@@ -110,11 +214,11 @@ function rebuildIntervalOptions() {
 // ── Dashboard stats ────────────────────────────────────────────────────────────
 async function refreshStats() {
   const s = await api("GET", "/api/stats");
-  document.getElementById("stat-revenue").textContent = fmt$(s.totalRevenue);
-  document.getElementById("stat-fees").textContent = fmt$(s.totalFees);
-  document.getElementById("stat-charges").textContent = s.totalCharges;
-  document.getElementById("stat-subs").textContent = s.activeSubs;
-  document.getElementById("stat-plans").textContent = s.activePlans;
+  animateNumber(document.getElementById("stat-revenue"), s.totalRevenue, { format: "money" });
+  animateNumber(document.getElementById("stat-fees"),    s.totalFees,    { format: "money" });
+  animateNumber(document.getElementById("stat-charges"), s.totalCharges, { format: "int" });
+  animateNumber(document.getElementById("stat-subs"),    s.activeSubs,   { format: "int" });
+  animateNumber(document.getElementById("stat-plans"),   s.activePlans,  { format: "int" });
   renderRecentTx(s.recentTransactions || []);
 }
 
@@ -124,8 +228,11 @@ function renderRecentTx(txs) {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No transactions yet</td></tr>';
     return;
   }
-  tbody.innerHTML = txs.map(t => `
-    <tr>
+  const newIds = new Set(txs.map(t => t.id));
+  tbody.innerHTML = txs.map((t, i) => {
+    const isNew = !lastTxIds.has(t.id);
+    return `
+    <tr class="row-in${isNew ? " flash" : ""}" style="animation-delay:${i * 35}ms">
       <td class="mono">${fmtAddr(t.customer)}</td>
       <td>${t.planName}</td>
       <td class="amount-positive">${fmt$(t.merchantAmount)}</td>
@@ -133,7 +240,9 @@ function renderRecentTx(txs) {
       <td>${badge(t.status)}</td>
       <td class="text-muted">${fmtTime(t.timestamp)}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
+  lastTxIds = newIds;
 }
 
 // ── Plans ──────────────────────────────────────────────────────────────────────
@@ -144,13 +253,13 @@ async function refreshPlans() {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No products yet — create one to get started</td></tr>';
     return;
   }
-  tbody.innerHTML = plans.map(p => `
-    <tr>
+  tbody.innerHTML = plans.map((p, i) => `
+    <tr class="row-in" style="animation-delay:${i * 30}ms">
       <td>
         <strong>${p.name}</strong>
-        ${p.description ? `<div class="text-muted" style="font-size:12px">${p.description}</div>` : ""}
+        ${p.description ? `<div class="text-muted" style="font-size:12px; margin-top:2px">${p.description}</div>` : ""}
       </td>
-      <td>${fmt$(p.price)} USDC</td>
+      <td><strong>${fmt$(p.price)}</strong> <span class="text-muted">USDC</span></td>
       <td>
         ${p.intervalLabel}
         ${p.isTestInterval ? ' <span class="badge badge-test">test</span>' : ""}
@@ -166,17 +275,33 @@ async function refreshPlans() {
       </td>
     </tr>
   `).join("");
+  attachRipplesToAll();
 }
 
 async function deactivatePlan(id) {
-  if (!confirm("Deactivate this plan? All active subscriptions will be cancelled.")) return;
-  await api("POST", `/api/plans/${id}/deactivate`);
-  refresh();
+  const ok = await confirmDialog(
+    "Deactivate plan?",
+    "All active subscriptions for this plan will be cancelled. This cannot be undone.",
+    "Deactivate"
+  );
+  if (!ok) return;
+  try {
+    await api("POST", `/api/plans/${id}/deactivate`);
+    toast("Plan deactivated", "success");
+    refresh();
+  } catch (e) {
+    toast(e.message, "error");
+  }
 }
 
 async function activatePlan(id) {
-  await api("POST", `/api/plans/${id}/activate`);
-  refresh();
+  try {
+    await api("POST", `/api/plans/${id}/activate`);
+    toast("Plan activated", "success");
+    refresh();
+  } catch (e) {
+    toast(e.message, "error");
+  }
 }
 
 // Create plan modal
@@ -196,16 +321,17 @@ document.getElementById("btn-save-plan").addEventListener("click", async () => {
   const cancelAfterRaw = document.getElementById("plan-cancel-after").value.trim();
   const cancelAfterCharges = cancelAfterRaw ? parseInt(cancelAfterRaw, 10) : null;
 
-  if (!name) { alert("Name is required"); return; }
-  if (!price || price <= 0) { alert("Price must be greater than 0"); return; }
-  if (!intervalSeconds) { alert("Please select a billing interval"); return; }
+  if (!name) { toast("Name is required", "error"); return; }
+  if (!price || price <= 0) { toast("Price must be greater than 0", "error"); return; }
+  if (!intervalSeconds) { toast("Please select a billing interval", "error"); return; }
 
   try {
     await api("POST", "/api/plans", { name, description: desc, price, feeBps, intervalSeconds, intervalLabel, cancelAfterCharges });
     closeModal("modal-plan");
+    toast(`Product "${name}" created`, "success");
     refresh();
   } catch (e) {
-    alert("Error: " + e.message);
+    toast(e.message, "error");
   }
 });
 
@@ -235,12 +361,12 @@ function renderSubsTable() {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="7">No subscriptions found</td></tr>';
     return;
   }
-  tbody.innerHTML = filtered.map(s => `
-    <tr>
+  tbody.innerHTML = filtered.map((s, i) => `
+    <tr class="row-in" style="animation-delay:${i * 30}ms">
       <td class="mono">${fmtAddr(s.customer)}</td>
       <td>${s.planName}</td>
       <td>${s.chargeCount}</td>
-      <td>${fmt$(s.totalPaid)}</td>
+      <td><strong>${fmt$(s.totalPaid)}</strong></td>
       <td>${s.status === "active" ? fmtNextCharge(s.nextChargeAt) : "—"}</td>
       <td>${badge(s.status)}</td>
       <td>
@@ -251,15 +377,26 @@ function renderSubsTable() {
       </td>
     </tr>
   `).join("");
+  attachRipplesToAll();
 }
 
 document.getElementById("sub-search").addEventListener("input", renderSubsTable);
 document.getElementById("sub-status-filter").addEventListener("change", renderSubsTable);
 
 async function cancelSub(id) {
-  if (!confirm("Cancel this subscription?")) return;
-  await api("POST", `/api/subscriptions/${id}/cancel`);
-  refresh();
+  const ok = await confirmDialog(
+    "Cancel subscription?",
+    "The customer will no longer be charged. You can re-subscribe them later.",
+    "Cancel subscription"
+  );
+  if (!ok) return;
+  try {
+    await api("POST", `/api/subscriptions/${id}/cancel`);
+    toast("Subscription cancelled", "success");
+    refresh();
+  } catch (e) {
+    toast(e.message, "error");
+  }
 }
 
 // Subscribe modal
@@ -280,17 +417,17 @@ document.getElementById("btn-save-sub").addEventListener("click", async () => {
   const spendCapRaw = document.getElementById("sub-spend-cap").value.trim();
   const spendCap = spendCapRaw ? parseFloat(spendCapRaw) : null;
 
-  if (!customer) { alert("Customer address is required"); return; }
-  if (!planId) { alert("Please select a plan"); return; }
+  if (!customer) { toast("Customer address is required", "error"); return; }
+  if (!planId) { toast("Please select a plan", "error"); return; }
 
   try {
     await api("POST", "/api/subscriptions", { customer, planId, spendCap });
     closeModal("modal-sub");
+    toast("Subscription created", "success");
     refresh();
-    // Navigate to subscriptions page
     document.querySelector('[data-page="subscriptions"]').click();
   } catch (e) {
-    alert("Error: " + e.message);
+    toast(e.message, "error");
   }
 });
 
@@ -313,8 +450,8 @@ function renderTxTable() {
     tbody.innerHTML = '<tr class="empty-row"><td colspan="8">No transactions found</td></tr>';
     return;
   }
-  tbody.innerHTML = transactions.map(t => `
-    <tr>
+  tbody.innerHTML = transactions.map((t, i) => `
+    <tr class="row-in" style="animation-delay:${i * 22}ms">
       <td class="mono" style="font-size:11px">${t.id.slice(0, 8)}…</td>
       <td class="mono">${fmtAddr(t.customer)}</td>
       <td>${t.planName}</td>
@@ -331,8 +468,14 @@ document.getElementById("tx-customer").addEventListener("input", () => refreshTx
 document.getElementById("tx-status-filter").addEventListener("change", () => refreshTx());
 
 // ── Modal helpers ──────────────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add("open"); }
-function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+function openModal(id) {
+  document.getElementById(id).classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove("open");
+  document.body.style.overflow = "";
+}
 
 document.querySelectorAll("[data-close]").forEach(btn => {
   btn.addEventListener("click", () => closeModal(btn.dataset.close));
@@ -342,6 +485,13 @@ document.querySelectorAll(".modal-overlay").forEach(overlay => {
   overlay.addEventListener("click", e => {
     if (e.target === overlay) closeModal(overlay.id);
   });
+});
+
+// Close any open modal with Escape
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") {
+    document.querySelectorAll(".modal-overlay.open").forEach(m => closeModal(m.id));
+  }
 });
 
 // ── Polling ────────────────────────────────────────────────────────────────────
@@ -367,6 +517,7 @@ async function init() {
     console.error("Could not load config:", e);
   }
   updateBanner();
+  attachRipplesToAll();
   await Promise.all([refreshStats(), refreshPlans()]);
   startPolling();
 }
