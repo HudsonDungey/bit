@@ -107,19 +107,19 @@ export function IncomeChart() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <CardTitle>Income</CardTitle>
-            <div className="mt-1 text-[12px] text-slate-500">
+            <div className="mt-1 text-[12px] text-muted-foreground">
               Merchant net per {bucketLabel(range)} · last {rangeLabel(range)}
             </div>
             <div className="mt-2 flex items-baseline gap-4">
-              <div className="text-[26px] font-semibold tabular-nums">{fmt$(total)}</div>
+              <div className="font-display text-[26px] font-semibold tabular-nums text-foreground">{fmt$(total)}</div>
               {peak && peak.income > 0 && (
-                <div className="text-[12px] text-slate-500">
-                  peak <span className="font-medium text-slate-700">{fmt$(peak.income)}</span> @ {fmtBucketTime(peak.t, range)}
+                <div className="text-[12px] text-muted-foreground">
+                  peak <span className="font-medium text-foreground">{fmt$(peak.income)}</span> @ {fmtBucketTime(peak.t, range)}
                 </div>
               )}
             </div>
           </div>
-          <div className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 p-0.5">
+          <div className="inline-flex h-8 items-center rounded-md border border-border bg-secondary p-0.5">
             {RANGES.map((r) => (
               <button
                 key={r.key}
@@ -127,8 +127,8 @@ export function IncomeChart() {
                 className={cn(
                   "h-7 px-3 text-[12px] font-medium rounded-[5px] transition-colors",
                   range === r.key
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700",
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {r.label}
@@ -165,7 +165,7 @@ export function IncomeChart() {
                   x2={WIDTH - PAD.right}
                   y1={y}
                   y2={y}
-                  stroke="rgb(226,232,240)"
+                  className="stroke-border"
                   strokeDasharray={i === 0 ? "" : "3 4"}
                   strokeWidth={1}
                 />
@@ -175,7 +175,7 @@ export function IncomeChart() {
                   textAnchor="end"
                   dominantBaseline="central"
                   fontSize="11"
-                  fill="rgb(100,116,139)"
+                  className="fill-muted-foreground"
                 >
                   {fmtAxisMoney(v)}
                 </text>
@@ -210,7 +210,7 @@ export function IncomeChart() {
                 y={HEIGHT - 8}
                 textAnchor="middle"
                 fontSize="11"
-                fill="rgb(100,116,139)"
+                className="fill-muted-foreground"
               >
                 {fmtBucketTime(p.t, range)}
               </text>
@@ -225,14 +225,14 @@ export function IncomeChart() {
                 x2={hover.x}
                 y1={PAD.top}
                 y2={PAD.top + innerH}
-                stroke="rgb(148,163,184)"
+                className="stroke-muted-foreground"
                 strokeDasharray="3 3"
               />
               <circle
                 cx={hover.x}
                 cy={hover.y}
                 r={4}
-                fill="white"
+                className="fill-background"
                 stroke="rgb(16,185,129)"
                 strokeWidth={2}
               />
@@ -247,7 +247,7 @@ export function IncomeChart() {
               textAnchor="middle"
               dominantBaseline="central"
               fontSize="12"
-              fill="rgb(148,163,184)"
+              className="fill-muted-foreground"
             >
               No income yet — create a plan and subscribe to start
             </text>
@@ -257,14 +257,14 @@ export function IncomeChart() {
         {/* Tooltip below SVG so it doesn't get clipped */}
         {hover && points[hover.i] && (
           <div
-            className="pointer-events-none -mt-2 ml-2 inline-block rounded-md border border-slate-200 bg-white px-3 py-1.5 text-[12px] shadow-sm"
+            className="pointer-events-none -mt-2 ml-2 inline-block rounded-md border border-border bg-popover px-3 py-1.5 text-[12px] shadow-lift"
             style={{
               transform: `translateX(${Math.max(0, hover.x - 70)}px)`,
               transition: "transform 60ms ease",
             }}
           >
-            <div className="font-medium text-slate-900">{fmt$(points[hover.i].income)}</div>
-            <div className="text-slate-500">
+            <div className="font-medium text-foreground">{fmt$(points[hover.i].income)}</div>
+            <div className="text-muted-foreground">
               {fmtBucketRange(points[hover.i].t, range)} · {points[hover.i].count} charge{points[hover.i].count === 1 ? "" : "s"}
             </div>
           </div>

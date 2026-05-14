@@ -26,6 +26,49 @@
     --radius: 0.6rem;
     --success: 154 92% 32%;
     --warning: 33 100% 39%;
+
+    /* surface helpers used by hand-rolled components */
+    --surface: 0 0% 100%;
+    --surface-2: 220 30% 98%;
+    --surface-3: 220 27% 96%;
+    --hairline: 220 22% 92%;
+    --text-strong: 230 56% 10%;
+    --text-soft: 222 12% 42%;
+    --sidebar-from: #0c1027;
+    --sidebar-to: #161b3d;
+  }
+
+  .dark {
+    --background: 213 54% 5%;
+    --foreground: 220 30% 96%;
+    --card: 217 48% 8%;
+    --card-foreground: 220 30% 96%;
+    --popover: 217 48% 9%;
+    --popover-foreground: 220 30% 96%;
+    --primary: 244 100% 70%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 38% 13%;
+    --secondary-foreground: 220 30% 96%;
+    --muted: 217 34% 12%;
+    --muted-foreground: 218 14% 62%;
+    --accent: 217 38% 14%;
+    --accent-foreground: 220 30% 96%;
+    --destructive: 358 75% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 244 100% 70%;
+    --success: 154 64% 46%;
+    --warning: 33 96% 56%;
+
+    --surface: 217 48% 8%;
+    --surface-2: 216 44% 10%;
+    --surface-3: 216 40% 12%;
+    --hairline: 217 32% 17%;
+    --text-strong: 220 30% 96%;
+    --text-soft: 218 14% 62%;
+    --sidebar-from: #070b16;
+    --sidebar-to: #0c1230;
   }
 
   * {
@@ -39,6 +82,12 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
     letter-spacing: -0.01em;
     overflow-x: hidden;
+  }
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
 
   @property --angle {
@@ -143,6 +192,84 @@
   .nav-rail[data-active="true"]::before {
     height: 22px;
   }
+
+  /* Surface tokens — usable on both themes */
+  .surface {
+    background-color: hsl(var(--surface));
+  }
+  .surface-2 {
+    background-color: hsl(var(--surface-2));
+  }
+  .surface-3 {
+    background-color: hsl(var(--surface-3));
+  }
+  .hairline {
+    border-color: hsl(var(--hairline));
+  }
+
+  /* Marketing — animated grid backdrop */
+  .grid-fade {
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.7) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.7) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse 75% 60% at 50% 0%, #000 30%, transparent 75%);
+  }
+
+  /* Marketing — subtle dotted backdrop */
+  .dot-fade {
+    background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 40%, transparent 80%);
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, #000 40%, transparent 80%);
+  }
+
+  /* Gradient text */
+  .text-gradient {
+    background: linear-gradient(135deg, #8b85ff 0%, #635bff 45%, #0a84ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Hairline gradient border for premium cards */
+  .ring-gradient {
+    position: relative;
+  }
+  .ring-gradient::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      150deg,
+      hsl(var(--border)) 0%,
+      hsl(var(--border) / 0.2) 40%,
+      rgba(99, 91, 255, 0.45) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Marquee for logo strip */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 38s linear infinite;
+  }
+
+  /* Code block shell */
+  .code-shell {
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
 }
 
 @layer utilities {
@@ -154,7 +281,25 @@
     height: 8px;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #cfd6e6;
+    background: hsl(var(--border));
     border-radius: 4px;
   }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .animation-delay-100 { animation-delay: 0.1s; }
+  .animation-delay-200 { animation-delay: 0.2s; }
+  .animation-delay-300 { animation-delay: 0.3s; }
+  .animation-delay-400 { animation-delay: 0.4s; }
+  .animation-delay-500 { animation-delay: 0.5s; }
+  .animation-delay-700 { animation-delay: 0.7s; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }

@@ -43,11 +43,11 @@ export function TransactionsPage({ visible }: Props) {
   }, [visible, fetchTx]);
 
   return (
-    <section className="animate-page-in mx-auto w-full max-w-[1180px] px-12 pb-20 pt-11">
-      <PageHeader title="Transactions" subtitle="Full payment history" />
+    <section className="animate-page-in mx-auto w-full max-w-[1180px] px-8 pb-20 pt-9 lg:px-12">
+      <PageHeader title="Transactions" subtitle="Full payment history across products and payroll" />
 
       <Card>
-        <div className="flex items-center gap-2.5 border-b border-slate-200 bg-slate-50/60 px-5 py-3.5">
+        <div className="flex items-center gap-2.5 border-b border-border bg-secondary/40 px-5 py-3.5">
           <Input
             value={customer}
             onChange={(e) => setCustomer(e.target.value)}
@@ -76,7 +76,7 @@ export function TransactionsPage({ visible }: Props) {
           <TableBody>
             {items.length === 0 ? (
               <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={8} className="py-12 text-center text-sm text-slate-500">
+                <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                   No transactions found
                 </TableCell>
               </TableRow>
@@ -86,13 +86,13 @@ export function TransactionsPage({ visible }: Props) {
                   <TableCell className="font-mono text-[11px]">{t.id.slice(0, 8)}…</TableCell>
                   <TableCell className="font-mono text-xs">{fmtAddr(t.customer)}</TableCell>
                   <TableCell>{t.planName}</TableCell>
-                  <TableCell className="font-semibold text-emerald-600 tabular-nums">{fmt$(t.gross)}</TableCell>
+                  <TableCell className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{fmt$(t.gross)}</TableCell>
                   <TableCell>{fmt$(t.merchantAmount)}</TableCell>
-                  <TableCell className="text-slate-500">{fmt$(t.fee)}</TableCell>
+                  <TableCell className="text-muted-foreground">{fmt$(t.fee)}</TableCell>
                   <TableCell>
                     <StatusBadge status={t.status} />
                   </TableCell>
-                  <TableCell className="text-slate-500">{fmtTime(t.timestamp)}</TableCell>
+                  <TableCell className="text-muted-foreground">{fmtTime(t.timestamp)}</TableCell>
                 </TableRow>
               ))
             )}

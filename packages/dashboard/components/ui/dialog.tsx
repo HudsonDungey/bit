@@ -48,7 +48,7 @@ export const DialogContent = React.forwardRef<HTMLDivElement, React.HTMLAttribut
     <div
       ref={ref}
       className={cn(
-        "relative w-[480px] max-w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-white border border-slate-200 shadow-2xl animate-modal-in",
+        "relative w-[480px] max-w-full max-h-[90vh] overflow-y-auto rounded-2xl bg-popover border border-border shadow-2xl animate-modal-in",
         className,
       )}
       {...props}
@@ -67,12 +67,12 @@ export function DialogHeader({
   onClose: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-      <h3 className="text-base font-bold tracking-tight text-slate-900">{title}</h3>
+    <div className="flex items-center justify-between border-b border-border px-6 py-5">
+      <h3 className="text-base font-bold tracking-tight text-foreground">{title}</h3>
       <button
         onClick={onClose}
         aria-label="Close"
-        className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors duration-200 ease-soft hover:bg-slate-100 hover:text-slate-900"
+        className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition-colors duration-200 ease-soft hover:bg-accent hover:text-foreground"
       >
         <X className="h-4 w-4" />
       </button>
@@ -86,7 +86,7 @@ export function DialogBody({ className, children }: { className?: string; childr
 
 export function DialogFooter({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex justify-end gap-2.5 border-t border-slate-200 bg-slate-50/60 px-6 py-4">
+    <div className="flex justify-end gap-2.5 border-t border-border bg-secondary/50 px-6 py-4">
       {children}
     </div>
   );

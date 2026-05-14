@@ -124,7 +124,7 @@ export function CreatePlanDialog({
                 value={feeBps}
                 onChange={(e) => setFeeBps(e.target.value)}
               />
-              <div className="mt-1 text-[11.5px] text-slate-500">100 bps = 1%</div>
+              <div className="mt-1 text-[11.5px] text-muted-foreground">100 bps = 1%</div>
             </div>
           </div>
           <div>
@@ -157,7 +157,7 @@ export function CreatePlanDialog({
               onChange={(e) => setCancelAfter(e.target.value)}
               placeholder="Leave blank for unlimited"
             />
-            <div className="mt-1 text-[11.5px] text-slate-500">
+            <div className="mt-1 text-[11.5px] text-muted-foreground">
               e.g. 12 to auto-cancel after 12 charges (1 year monthly)
             </div>
           </div>

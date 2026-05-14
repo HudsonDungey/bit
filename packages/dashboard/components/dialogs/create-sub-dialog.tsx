@@ -77,10 +77,10 @@ export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props)
         <DialogBody className="space-y-4">
           <div>
             <Label>Customer (your connected wallet)</Label>
-            <div className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 font-mono text-[12.5px] text-slate-700">
+            <div className="flex h-10 items-center rounded-md border border-border bg-secondary/50 px-3 font-mono text-[12.5px] text-foreground">
               {connected ? fmtAddr(connected) : "Not connected — use the Connect Wallet button"}
             </div>
-            <div className="mt-1 text-[11.5px] text-slate-500">
+            <div className="mt-1 text-[11.5px] text-muted-foreground">
               The subscription will be created on-chain from this address. A one-time USDC approval is requested if needed.
             </div>
           </div>
@@ -105,7 +105,7 @@ export function CreateSubDialog({ open, onOpenChange, plans, onCreated }: Props)
               onChange={(e) => setSpendCap(e.target.value)}
               placeholder="Leave blank for unlimited"
             />
-            <div className="mt-1 text-[11.5px] text-slate-500">
+            <div className="mt-1 text-[11.5px] text-muted-foreground">
               Subscription auto-completes when total paid reaches this limit
             </div>
           </div>

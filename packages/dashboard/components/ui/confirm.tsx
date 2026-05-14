@@ -49,7 +49,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         <DialogContent className="w-[400px]">
           <DialogHeader title={state?.opts.title || "Are you sure?"} onClose={() => close(false)} />
           <DialogBody>
-            <p className="text-sm leading-relaxed text-slate-700">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {state?.opts.description}
             </p>
           </DialogBody>
