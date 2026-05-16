@@ -12,11 +12,11 @@ const buttonVariants = cva(
         default:
           "btn-sheen bg-brand-gradient text-white shadow-brand hover:bg-brand-gradient-hover hover:-translate-y-px hover:shadow-brand-lg",
         outline:
-          "bg-white border border-slate-200 text-slate-900 shadow-soft hover:border-brand-500 hover:text-brand-600 hover:-translate-y-px",
+          "bg-card border border-border text-foreground shadow-soft hover:border-brand-500 hover:text-brand-600 hover:-translate-y-px dark:hover:text-brand-300",
         danger:
-          "bg-white border border-rose-200 text-rose-600 shadow-soft hover:bg-rose-50 hover:border-rose-500 hover:-translate-y-px",
-        ghost: "hover:bg-slate-100 text-slate-700",
-        link: "text-brand-600 underline-offset-4 hover:underline",
+          "bg-card border border-rose-200 text-rose-600 shadow-soft hover:bg-rose-50 hover:border-rose-500 hover:-translate-y-px dark:border-rose-500/30 dark:text-rose-400 dark:hover:bg-rose-500/10",
+        ghost: "hover:bg-accent text-foreground",
+        link: "text-brand-600 underline-offset-4 hover:underline dark:text-brand-300",
       },
       size: {
         default: "h-10 px-4 py-2",

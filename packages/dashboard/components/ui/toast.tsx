@@ -82,7 +82,7 @@ function Toast({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) 
     <div
       onClick={onDismiss}
       className={cn(
-        "pointer-events-auto min-w-[280px] max-w-[380px] flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white px-4 py-3 pl-3.5 shadow-lift cursor-pointer animate-toast-in relative overflow-hidden",
+        "pointer-events-auto min-w-[280px] max-w-[380px] flex items-start gap-2.5 rounded-xl border border-border bg-popover px-4 py-3 pl-3.5 shadow-lift cursor-pointer animate-toast-in relative overflow-hidden",
         "before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px]",
         accent,
       )}
@@ -95,7 +95,7 @@ function Toast({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) 
       >
         <Icon className="h-3 w-3" strokeWidth={3} />
       </div>
-      <div className="flex-1 text-sm leading-snug text-slate-900">
+      <div className="flex-1 text-sm leading-snug text-foreground">
         {item.title ? <strong className="block font-semibold mb-0.5">{item.title}</strong> : null}
         {item.message}
       </div>

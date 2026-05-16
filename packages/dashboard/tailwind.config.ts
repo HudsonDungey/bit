@@ -58,6 +58,22 @@ const config: Config = {
         },
         success: "hsl(var(--success))",
         warning: "hsl(var(--warning))",
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        electric: {
+          50: "#e8f3ff",
+          100: "#cfe6ff",
+          200: "#9fccff",
+          300: "#5fadff",
+          400: "#2b95ff",
+          500: "#0a84ff",
+          600: "#0067d6",
+          700: "#0050a8",
+          800: "#063e80",
+          900: "#0a2f5e",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -66,6 +82,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui"],
+        display: ["var(--font-inter-tight)", "var(--font-inter)", "ui-sans-serif", "system-ui"],
         mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular"],
       },
       backgroundImage: {
@@ -79,6 +96,7 @@ const config: Config = {
         "brand-lg": "0 12px 28px -6px rgba(99,91,255,0.55), 0 4px 10px -2px rgba(99,91,255,0.25)",
         soft: "0 1px 3px rgba(15,23,42,0.05), 0 1px 2px rgba(15,23,42,0.03)",
         lift: "0 16px 40px -12px rgba(15,23,42,0.18), 0 4px 12px -4px rgba(15,23,42,0.08)",
+        glow: "0 0 0 1px rgba(99,91,255,0.12), 0 0 40px -8px rgba(99,91,255,0.35)",
       },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
@@ -133,6 +151,41 @@ const config: Config = {
           to:   { transform: "translateY(0)",     opacity: "1" },
         },
         spin: { to: { transform: "rotate(360deg)" } },
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(22px)" },
+          to:   { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          from: { opacity: "0" },
+          to:   { opacity: "1" },
+        },
+        "scale-in": {
+          from: { opacity: "0", transform: "scale(0.96)" },
+          to:   { opacity: "1", transform: "scale(1)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%":      { transform: "translateY(-10px)" },
+        },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0) translateX(0)" },
+          "50%":      { transform: "translateY(-16px) translateX(8px)" },
+        },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
+        "border-flow": {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%":      { backgroundPosition: "100% 50%" },
+        },
+        "pulse-ring": {
+          "0%":   { transform: "scale(0.8)", opacity: "0.7" },
+          "100%": { transform: "scale(2.4)", opacity: "0" },
+        },
+        "ticker-up": {
+          from: { transform: "translateY(8px)", opacity: "0" },
+          to:   { transform: "translateY(0)", opacity: "1" },
+        },
       },
       animation: {
         "page-in": "page-in 0.45s cubic-bezier(0.16,1,0.3,1) both",
@@ -149,6 +202,15 @@ const config: Config = {
         drift2: "drift2 28s ease-in-out infinite",
         "slide-down": "slide-down 0.5s cubic-bezier(0.34,1.56,0.64,1)",
         "spin-slow": "spin 4s linear infinite",
+        "fade-up": "fade-up 0.7s cubic-bezier(0.16,1,0.3,1) both",
+        "fade-in": "fade-in 0.8s ease-out both",
+        "scale-in": "scale-in 0.5s cubic-bezier(0.16,1,0.3,1) both",
+        float: "float 6s ease-in-out infinite",
+        "float-slow": "float-slow 9s ease-in-out infinite",
+        shimmer: "shimmer 2s infinite",
+        "border-flow": "border-flow 6s ease infinite",
+        "pulse-ring": "pulse-ring 2s cubic-bezier(0.16,1,0.3,1) infinite",
+        "ticker-up": "ticker-up 0.4s cubic-bezier(0.16,1,0.3,1) both",
       },
     },
   },
