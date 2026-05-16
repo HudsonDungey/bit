@@ -6,6 +6,14 @@
     "packages/*"
   ],
   "scripts": {
+    "anvil": "anvil --host 127.0.0.1 --port 8545 --chain-id 31337",
+    "deploy:anvil": "cd contracts && forge script script/Deploy.s.sol --rpc-url anvil --broadcast --skip-simulation",
+    "deploy:sepolia": "cd contracts && forge script script/DeploySepolia.s.sol --rpc-url sepolia --broadcast -vvvv",
+    "deploy:sepolia:verify": "cd contracts && forge script script/DeploySepolia.s.sol --rpc-url sepolia --broadcast --verify -vvvv",
+    "dev": "yarn workspace @pulse/dashboard dev -p 3001",
+    "reset": "pkill -f anvil || true; pkill -f 'next dev' || true",
+    "compile": "cd contracts && forge build",
+    "test:contracts": "cd contracts && forge test -vvv",
     "build": "yarn workspace @pulse/sdk build && yarn workspace @pulse/scheduler build",
     "typecheck": "yarn workspace @pulse/sdk typecheck && yarn workspace @pulse/scheduler typecheck",
     "test:e2e": "node --loader ts-node/esm packages/scheduler/test/e2e.ts",

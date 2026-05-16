@@ -1,5 +1,8 @@
 # How to operate Pulse
 
+> **Just want to run it?** → [`RUN.md`](./RUN.md) has the copy-paste quickstart.
+> This file is the deeper reference: what's happening on chain, the API surface, troubleshooting, the file map.
+
 Pulse runs in two modes:
 
 - **Sepolia (real wallets, RainbowKit + wagmi)** — the main path. Your MetaMask signs every plan/subscribe/cancel; an Alchemy RPC powers reads; an off-chain executor key calls `charge()` for due subscriptions. → [Sepolia setup](#sepolia-setup) below.

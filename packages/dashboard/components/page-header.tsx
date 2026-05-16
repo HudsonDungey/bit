@@ -8,26 +8,28 @@ interface Props {
 
 export function PageHeader({ title, subtitle, action }: Props) {
   return (
-    <div className="mb-8 flex items-start justify-between gap-4">
-      <div>
-        <h2 className="font-display text-[26px] font-bold leading-tight tracking-tight text-foreground">
+    <div className="mb-8 flex items-end justify-between gap-6">
+      <div className="min-w-0">
+        <h1 className="font-display text-2xl font-semibold text-foreground">
           {title}
-        </h2>
+        </h1>
         {subtitle && (
-          <p className="mt-1 text-[13.5px] text-muted-foreground">{subtitle}</p>
+          <p className="mt-1 max-w-[640px] text-sm text-muted-foreground">
+            {subtitle}
+          </p>
         )}
       </div>
-      {action}
+      {action && (
+        <div className="flex shrink-0 items-center gap-2">{action}</div>
+      )}
     </div>
   );
 }
 
 export function LiveBadge() {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-[11.5px] font-medium text-muted-foreground shadow-soft">
-      <span className="relative inline-block h-2 w-2 rounded-full bg-emerald-500">
-        <span className="absolute -inset-0.5 animate-live-ping rounded-full bg-emerald-500 opacity-40" />
-      </span>
+    <span className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-muted-foreground">
+      <span className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--success))]" />
       Live
     </span>
   );

@@ -18,8 +18,8 @@ import {
 import { Sidebar, type PageKey } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
 import { TestBanner } from "@/components/test-banner";
-import { BgMesh } from "@/components/bg-mesh";
 import { CommandPalette, type Command } from "@/components/command-palette";
+import { WalletGate } from "@/components/wallet-gate";
 import { DashboardPage } from "@/components/pages/dashboard-page";
 import { ProductsPage } from "@/components/pages/products-page";
 import { SubscriptionsPage } from "@/components/pages/subscriptions-page";
@@ -165,8 +165,7 @@ export function DashboardShell() {
   );
 
   return (
-    <>
-      <BgMesh />
+    <WalletGate>
       <Sidebar
         page={page}
         onPageChange={setPage}
@@ -185,7 +184,7 @@ export function DashboardShell() {
           title={PAGE_TITLES[page]}
           onOpenCommand={() => setCmdOpen(true)}
         />
-        <main className="flex-1 bg-hero-mesh">
+        <main className="flex-1 bg-background">
           {page === "dashboard" && (
             <DashboardPage
               stats={stats}
@@ -235,6 +234,6 @@ export function DashboardShell() {
         plans={plans}
         onCreated={refreshAll}
       />
-    </>
+    </WalletGate>
   );
 }

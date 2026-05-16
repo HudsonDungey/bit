@@ -75,10 +75,35 @@ const config: Config = {
           900: "#0a2f5e",
         },
       },
+      // strict 4/8 spacing scale — additive (Tailwind defaults still exist).
+      // Use these where intentional rhythm matters.
+      spacing: {
+        "px-1": "4px",
+        "px-2": "8px",
+        "px-3": "12px",
+        "px-4": "16px",
+        "px-6": "24px",
+        "px-8": "32px",
+        "px-12": "48px",
+        "px-16": "64px",
+      },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        sm: "var(--radius-sm)",
+        md: "var(--radius-md)",
+        lg: "var(--radius-lg)",
+        xl: "var(--radius-xl)",
+        "2xl": "var(--radius-2xl)",
+      },
+      fontSize: {
+        // locked 8-step scale: 11 / 12 / 13 / 14 / 16 / 20 / 26 / 36
+        "2xs":   ["11px", { lineHeight: "16px", letterSpacing: "0.02em" }],
+        xs:      ["12px", { lineHeight: "16px" }],
+        sm:      ["13px", { lineHeight: "20px" }],
+        base:    ["14px", { lineHeight: "20px" }],
+        lg:      ["16px", { lineHeight: "24px" }],
+        xl:      ["20px", { lineHeight: "28px" }],
+        "2xl":   ["26px", { lineHeight: "32px", letterSpacing: "-0.02em" }],
+        "3xl":   ["36px", { lineHeight: "40px", letterSpacing: "-0.02em" }],
       },
       fontFamily: {
         sans: ["var(--font-inter)", "ui-sans-serif", "system-ui"],
@@ -92,11 +117,21 @@ const config: Config = {
           "radial-gradient(1200px 600px at 0% -20%, rgba(99,91,255,0.18), transparent 60%), radial-gradient(900px 500px at 100% 0%, rgba(0,212,255,0.12), transparent 55%), radial-gradient(700px 400px at 50% 100%, rgba(142,123,255,0.10), transparent 50%)",
       },
       boxShadow: {
+        // monochrome elevation scale — what dashboard components should use
+        "e1": "var(--elevation-1)",
+        "e2": "var(--elevation-2)",
+        "e3": "var(--elevation-3)",
+        // legacy aliases (kept so marketing pages don't break)
         brand: "0 8px 24px -6px rgba(99,91,255,0.45), 0 2px 6px -1px rgba(99,91,255,0.25)",
         "brand-lg": "0 12px 28px -6px rgba(99,91,255,0.55), 0 4px 10px -2px rgba(99,91,255,0.25)",
-        soft: "0 1px 3px rgba(15,23,42,0.05), 0 1px 2px rgba(15,23,42,0.03)",
-        lift: "0 16px 40px -12px rgba(15,23,42,0.18), 0 4px 12px -4px rgba(15,23,42,0.08)",
+        soft: "var(--elevation-1)",
+        lift: "var(--elevation-3)",
         glow: "0 0 0 1px rgba(99,91,255,0.12), 0 0 40px -8px rgba(99,91,255,0.35)",
+      },
+      transitionDuration: {
+        fast: "var(--motion-fast)",
+        DEFAULT: "var(--motion-base)",
+        slow: "var(--motion-slow)",
       },
       transitionTimingFunction: {
         spring: "cubic-bezier(0.34, 1.56, 0.64, 1)",
